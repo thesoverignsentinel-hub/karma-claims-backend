@@ -13,7 +13,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ⚡ KARMA CLAIMS — ENGINE v5.0 (MASTER MERGE)
+# ⚡ KARMA CLAIMS — ENGINE v5.1 (LITIGATOR EDITION)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s")
@@ -143,17 +143,17 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("⚡ Karma Claims V5.0 (Master Merge) is online.")
+    logger.info("⚡ Karma Claims V5.1 (Litigator Edition) is online.")
     yield
 
-app = FastAPI(title="Karma Claims v5.0", lifespan=lifespan)
+app = FastAPI(title="Karma Claims v5.1", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
 client = AsyncGroq(api_key=API_KEY)
 
-# ── 4. BOT PROTECTION & VALIDATION (From v2.6) ──
+# ── 4. BOT PROTECTION & VALIDATION ──
 _INJECTION_PATTERNS = [
     "ignore above", "ignore previous", "disregard", "system:",
     "###", "---", "```", "<|", "|>", "prompt:", "assistant:",
@@ -194,49 +194,100 @@ class ChatRequest(BaseModel): user_message: str
 class BSDetectorRequest(BaseModel): corporate_reply: str
 class OutcomeRequest(BaseModel): amount_recovered: float; company_name: str; has_screenshot: bool = False
 
-# ── 5. DYNAMIC AI PROMPT BUILDER (From v2.6) ──
+# ── 5. DYNAMIC AI PROMPT BUILDER (Litigator Logic) ──
 def build_system_prompt(industry: str, regulator: str) -> str:
+    # Deeply researched, highly intimidating legal arsenals based strictly on Indian Law.
     regulatory_context = {
-        "Fintech": "Cite the 'RBI Circular on Limiting Liability of Customers in Unauthorised Electronic Banking Transactions'. Demand shadow credit within 10 working days or threaten escalation to the RBI Ombudsman at cms.rbi.org.in.",
-        "Banking": "Cite the 'RBI Banking Ombudsman Scheme 2006 (as amended in 2017)' and the Banking Regulation Act. Demand resolution within 30 days per RBI mandate or threaten direct escalation.",
-        "E-Commerce": "Cite 'Rule 4(4) and Rule 7 of the Consumer Protection (E-Commerce) Rules, 2020'. Threaten a Chargeback Dispute for 'Service Not Rendered' and invoke Section 9 of the Consumer Protection Act, 2019.",
-        "Quick Commerce": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Emphasize deficiency in rapid-delivery promises and threaten CCPA escalation for deceptive service.",
-        "Food Delivery": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Threaten escalation to the CCPA for deficiency of service and failure to provide paid goods.",
-        "Telecom": "Cite 'TRAI Telecom Consumers Complaint Redressal Regulations, 2012'. Threaten escalation to the Telecom Ombudsman (TRAI CGPDTM portal) and demand resolution per the 30-day mandate.",
-        "Airlines": "Cite 'DGCA Civil Aviation Requirements (CAR) Section 3, Series M, Part I' on Passenger Service. Threaten DGCA formal complaint and Ministry of Civil Aviation intervention.",
-        "Travel": "Cite the Consumer Protection Act, 2019. Threaten formal complaints to the CCPA for deceptive refund policies on travel bookings.",
-        "Mobility": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Demand immediate refund for cancelled/defective rides or threaten formal CCPA action.",
-        "EdTech": "Cite 'UGC Guidelines on Online Courses' and Consumer Protection Act, 2019, Section 2(9) on product liability. Threaten escalation to the CCPA for predatory marketing.",
-        "Electronics": "Cite Section 2(9) of the Consumer Protection Act, 2019 regarding product liability and warranty enforcement. Threaten consumer court for selling defective goods."
+        "Fintech": (
+            "You MUST cite the 'Reserve Bank - Integrated Ombudsman Scheme (RB-IOS), 2021'. "
+            "Explicitly invoke the RBI Circular 'Harmonisation of Turnaround Time (TAT) and customer compensation for failed transactions' (DPSS.CO.PD No.629/02.01.014/2019-20), demanding the mandatory penalty of INR 100 per day for delay beyond the prescribed TAT. "
+            "Also cite the 'RBI Circular on Limiting Liability of Customers in Unauthorised Electronic Banking Transactions'. "
+            "Accuse them of 'misappropriation of funds' and 'gross deficiency in financial services'."
+        ),
+        "Banking": (
+            "You MUST cite the 'Reserve Bank - Integrated Ombudsman Scheme (RB-IOS), 2021' and Section 35A of the Banking Regulation Act, 1949. "
+            "Invoke the RBI Circular on 'Harmonisation of Turnaround Time (TAT)' demanding the INR 100 per day penalty for delayed refunds. "
+            "Threaten to report the branch and nodal officer to the Consumer Education and Protection Department (CEPD) of the RBI for 'wilful negligence and breach of fiduciary duty'."
+        ),
+        "E-Commerce": (
+            "You MUST cite 'Section 2(11) [Deficiency in Service]' and 'Section 2(47) [Unfair Trade Practice]' of the Consumer Protection Act, 2019. "
+            "Explicitly cite 'Rule 4(4) and Rule 5 of the Consumer Protection (E-Commerce) Rules, 2020' regarding seller and platform liabilities. "
+            "Threaten action under Section 88 & 89 of the CPA 2019 (punishment and fines) and escalation to the Central Consumer Protection Authority (CCPA) for class-action investigation."
+        ),
+        "Quick Commerce": (
+            "You MUST cite 'Section 2(11) [Deficiency in Service]' of the Consumer Protection Act, 2019, and the 'Consumer Protection (E-Commerce) Rules, 2020'. "
+            "Accuse them of 'Misleading Advertisements' under Section 2(28) regarding their guaranteed delivery timelines. "
+            "Demand compensation for mental agony alongside the refund."
+        ),
+        "Food Delivery": (
+            "You MUST cite 'Section 2(11) [Deficiency in Service]' of the Consumer Protection Act, 2019. "
+            "Cite 'Consumer Protection (E-Commerce) Rules, 2020' for platform accountability. "
+            "Accuse them of imposing an 'Unfair Contract' under Section 2(46) if they use generic non-refund policies to deny the claim."
+        ),
+        "Telecom": (
+            "You MUST cite 'TRAI Telecom Consumers Complaint Redressal Regulations, 2012' and DoT guidelines. "
+            "Accuse them of 'Deficiency in Service' under the Consumer Protection Act, 2019. "
+            "Demand immediate resolution per the 30-day TRAI mandate."
+        ),
+        "Airlines": (
+            "You MUST cite 'DGCA Civil Aviation Requirements (CAR) Section 3, Series M, Part IV' regarding facilities to be provided to passengers by airlines due to denied boarding, cancellation, and delays in flights. "
+            "Accuse them of 'Deficiency in Service' under Section 2(11) of the Consumer Protection Act, 2019."
+        ),
+        "Travel": (
+            "You MUST cite 'Section 2(11) [Deficiency in Service]' and 'Section 2(47) [Unfair Trade Practice]' of the Consumer Protection Act, 2019. "
+            "Accuse them of imposing 'Unfair Contracts' (Section 2(46)) via hidden cancellation clauses and deceptive refund policies."
+        ),
+        "Mobility": (
+            "You MUST cite 'Section 2(11) [Deficiency in Service]' of the Consumer Protection Act, 2019, and the Motor Vehicles Aggregator Guidelines, 2020. "
+            "Accuse them of unfair trade practices for arbitrary cancellations, safety breaches, or price surging without adequate service delivery."
+        ),
+        "EdTech": (
+            "You MUST cite 'Section 2(47) [Unfair Trade Practice]' and 'Section 2(28) [Misleading Advertisement]' of the Consumer Protection Act, 2019. "
+            "Cite the Ministry of Education 'Advisory to EdTech Companies'. Accuse them of predatory marketing."
+        ),
+        "Electronics": (
+            "You MUST cite 'Section 2(34) [Product Liability]' and 'Section 2(11) [Deficiency in Service]' of the Consumer Protection Act, 2019. "
+            "Demand immediate replacement or refund, threatening litigation at the District Consumer Commission for selling defective goods."
+        )
     }
 
-    industry_rule = regulatory_context.get(industry, "Cite the Consumer Protection Act, 2019, and relevant sector-specific regulations.")
+    industry_rule = regulatory_context.get(industry, "Cite 'Section 2(11) [Deficiency in Service]' and 'Section 2(47) [Unfair Trade Practice]' of the Consumer Protection Act, 2019.")
+
+    # STRICT ISOLATION: AI will only see the threat associated with the specific regulator.
+    if regulator == "RBI":
+        escalation_threat = "Threaten direct legal escalation to the RBI Ombudsman via cms.rbi.org.in, filing a grievance on CPGRAMS (Ministry of Finance), and reporting to CIBIL for institutional negligence. DO NOT mention the CCPA."
+    elif regulator == "DGCA":
+        escalation_threat = "Threaten a formal complaint to the Directorate General of Civil Aviation (DGCA), Ministry of Civil Aviation via AirSewa, and the Consumer Court. DO NOT mention RBI."
+    elif regulator == "TRAI":
+        escalation_threat = "Threaten escalation to the Telecom Regulatory Authority of India (TRAI), the Department of Telecommunications (DoT) via PGPORTAL, and Consumer Court. DO NOT mention RBI."
+    else:
+        escalation_threat = "Threaten filing a formal lawsuit in the District Consumer Disputes Redressal Commission under Section 34 of the CPA 2019, and a systemic complaint to the Central Consumer Protection Authority (CCPA)."
 
     return (
-        "You are a coldly strategic, fiercely effective Indian consumer rights advocate. "
-        "Your singular mission: extract an immediate refund or settlement for the consumer. "
-        "Draft a formal, legally intimidating grievance email that makes refunding immediately "
-        "appear far cheaper than the regulatory and reputational fallout of non-compliance.\n\n"
+        "You are a Senior Corporate Litigator and Advocate of the Supreme Court of India. "
+        "You are drafting a highly aggressive, legally ironclad Pre-Litigation Grievance Notice on behalf of your client (the consumer). "
+        "Your goal is to strike fear into the Nodal Officer/Legal Team of the target company by proving that the legal, penal, and reputational costs of ignoring this notice will vastly exceed the refund amount.\n\n"
         f"INDUSTRY: {industry} | PRIMARY REGULATOR: {regulator}\n\n"
-        f"REGULATORY ARSENAL:\n{industry_rule}\n\n"
-        "ADDITIONAL UNIVERSAL THREATS:\n"
-        "- If hidden charges exist: Cite 'CCPA Guidelines for Prevention and Regulation of Dark Patterns, 2023'.\n"
-        "- Mention potential Consumer Court filing under Section 34 of CPA 2019 if not resolved within 48 hours.\n\n"
-        "TONE: Coldly professional. Legally precise. Financially calculating. Zero emotion. Maximum pressure.\n"
-        "FORMAT: Begin with '[URGENT LEGAL NOTICE — 48-HOUR RESOLUTION REQUIRED]'. "
-        "Use numbered sections. "
-        "Keep it concise. Do not exceed 250 words. Do not add pleasantries."
+        f"EXACT LEGAL SECTIONS TO CITE (MANDATORY):\n{industry_rule}\n\n"
+        f"ESCALATION THREAT TO USE:\n{escalation_threat}\n\n"
+        "STRICT RULES FOR DRAFTING:\n"
+        f"1. REGULATORY ISOLATION: You MUST frame the entire argument strictly around {regulator} laws. Do NOT mention other regulators.\n"
+        "2. LEGAL TONE: Use heavy legal jargon (e.g., 'breach of fiduciary duty', 'wilful negligence', 'statutory violation', 'deficiency in service under Section 2(11)'). Do not sound like an angry customer; sound like a ruthless lawyer.\n"
+        "3. FORMAT: Use a strict legal notice structure with ALL-CAPS headers (e.g., STATEMENT OF FACTS, STATUTORY VIOLATIONS, PRAYER FOR RELIEF).\n"
+        "4. PLAIN TEXT ONLY: Do NOT use markdown, asterisks (**), or bolding. Just use plain text.\n"
+        "5. KEEP IT CONCISE: Do not exceed 300 words.\n"
+        "6. NO SIGNATURE: Stop generating text immediately after the 'PRAYER FOR RELIEF' section. DO NOT write 'Sincerely', 'Regards', or add a signature. The system will append it."
     )
 
 # ── 6. ENDPOINTS ──
 @app.get("/health")
 async def health_check():
-    return {"status": "Live", "version": "5.0", "systems_online": 9}
+    return {"status": "Live", "version": "5.1", "systems_online": 9}
 
 @app.get("/")
 @app.head("/")
 async def root():
-    return {"message": "Karma Claims API Engine v5.0 is online and operational."}
+    return {"message": "Karma Claims API Engine v5.1 is online and operational."}
 
 @app.post("/generate-draft")
 @limiter.limit("5/minute")
@@ -252,12 +303,9 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
 
     user_message = (
         f"TARGET ENTITY: {payload.company_name}\n"
-        f"INDUSTRY: {industry} | REGULATOR: {regulator}\n"
         f"ORDER/TRANSACTION ID: {payload.order_id}\n"
         f"DISPUTED AMOUNT: ₹{payload.disputed_amount}\n"
         f"CONSUMER NAME: {payload.user_name}\n"
-        f"CONSUMER PHONE: {payload.user_phone}\n"
-        f"CONSUMER EMAIL: {payload.user_email}\n\n"
         f"INCIDENT DESCRIPTION:\n{payload.complaint_details}"
     )
 
@@ -265,18 +313,23 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
         response = await client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": system_prompt + "\nDO NOT add a signature block at the end. The system will append it."},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.25, max_tokens=1024, top_p=0.9
         )
         
-        # 1. Grab Raw AI Draft
+        # 1. Grab Raw AI Draft and strip hallucinations
         raw_draft = response.choices[0].message.content.strip()
+        if "Sincerely" in raw_draft:
+            raw_draft = raw_draft.split("Sincerely")[0].strip()
+        if "Regards" in raw_draft:
+            raw_draft = raw_draft.split("Regards")[0].strip()
         
-        # 2. Hardcode the Signature (From v2.6)
+        # 2. Hardcode the Proofs & Signature (From v2.6)
         signature_block = (
-            "\n\nSincerely,\n"
+            "\n\nPlease find attached the relevant transaction proofs, screenshots, and evidence supporting this claim.\n\n"
+            "Sincerely,\n"
             f"{payload.user_name}\n"
             f"Phone: {payload.user_phone}\n"
             f"Email: {payload.user_email}"
@@ -287,7 +340,7 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
 
         # 4. Generate Professional Subject Line
         company_short = payload.company_name.split("(")[0].strip()
-        subject_line = f"URGENT LEGAL NOTICE | {company_short} | Ref: {payload.order_id} | ₹{payload.disputed_amount}"
+        subject_line = f"URGENT PRE-LITIGATION NOTICE | {company_short} | Ref: {payload.order_id} | ₹{payload.disputed_amount}"
 
         return {"target_email": target_email, "subject": subject_line, "draft": draft_body}
 
