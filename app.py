@@ -13,7 +13,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ⚡ KARMA CLAIMS — ENGINE v4.1 (THE MASTER LAUNCH)
+# ⚡ KARMA CLAIMS — ENGINE v5.0 (MASTER MERGE)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s")
@@ -26,7 +26,7 @@ if not API_KEY:
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
-# ── 1. THE LIVING SCOREBOARD (MVP Memory) ──
+# ── 1. THE LIVING SCOREBOARD ──
 SESSION_WINS = 0
 SESSION_RECOVERED = 0.0
 
@@ -87,7 +87,7 @@ VERIFIED_DB: dict[str, dict] = {
     "IDFC First Bank (IDFC FIRST Bank Ltd)": {"email": "pno@idfcfirstbank.com", "industry": "Banking", "regulator": "RBI", "twitter": "@IDFCFIRSTBank", "portal": "https://www.idfcfirstbank.com/contact-us"},
     "Yes Bank (YES BANK Limited)": {"email": "pno@yesbank.in", "industry": "Banking", "regulator": "RBI", "twitter": "@YESBANKCare", "portal": "https://www.yesbank.in/contact-us"},
 
-    # MOBILITY & TRAVEL (CCPA)
+    # MOBILITY & TRAVEL (CCPA/DGCA)
     "Ola Cabs (ANI Technologies Pvt Ltd)": {"email": "grievance@olacabs.com", "industry": "Mobility", "regulator": "CCPA", "twitter": "@Ola_Support", "portal": "https://www.olacabs.com/contact"},
     "Uber India (Uber India Systems Pvt Ltd)": {"email": "grievanceofficer_india@uber.com", "industry": "Mobility", "regulator": "CCPA", "twitter": "@Uber_Support", "portal": "https://help.uber.com/"},
     "Rapido (Roppen Transportation Services)": {"email": "grievance@rapido.bike", "industry": "Mobility", "regulator": "CCPA", "twitter": "@rapidobikeapp", "portal": "https://rapido.bike/contact-us"},
@@ -99,14 +99,14 @@ VERIFIED_DB: dict[str, dict] = {
     "RedBus (Ibibo Group Pvt Ltd)": {"email": "grievanceofficer@redbus.in", "industry": "Travel", "regulator": "CCPA", "twitter": "@redBus_in", "portal": "https://www.redbus.in/info/contactus"},
     "IRCTC (Indian Railway Catering and Tourism Corp)": {"email": "care@irctc.co.in", "industry": "Travel", "regulator": "CCPA", "twitter": "@IRCTCofficial", "portal": "https://www.irctc.co.in/nget/en/contactus"},
 
-    # TELECOM & BROADBAND (TRAI/CCPA)
-    "Reliance Jio (Reliance Jio Infocomm Ltd)": {"email": "appellate@jio.com", "industry": "Telecom", "regulator": "CCPA", "twitter": "@JioCare", "portal": "https://www.jio.com/help/contact-us"},
-    "Bharti Airtel (Bharti Airtel Ltd)": {"email": "nodalofficer@airtel.com", "industry": "Telecom", "regulator": "CCPA", "twitter": "@Airtel_Presence", "portal": "https://www.airtel.in/help"},
-    "Vodafone Idea (Vi)": {"email": "appellate.officer@vodafoneidea.com", "industry": "Telecom", "regulator": "CCPA", "twitter": "@ViCustomerCare", "portal": "https://www.myvi.in/help-support"},
-    "BSNL (Bharat Sanchar Nigam Limited)": {"email": "cgm_hq@bsnl.co.in", "industry": "Telecom", "regulator": "CCPA", "twitter": "@BSNLCorporate", "portal": "https://www.bsnl.co.in/opencms/bsnl/BSNL/about_us/customer_care.html"},
-    "ACT Fibernet (Atria Convergence Technologies)": {"email": "nodal@actcorp.in", "industry": "Telecom", "regulator": "CCPA", "twitter": "@ACTFibernet", "portal": "https://www.actcorp.in/contact-us"},
-    "Hathway (Hathway Cable & Datacom Ltd)": {"email": "nodalofficer@hathway.net", "industry": "Telecom", "regulator": "CCPA", "twitter": "@HathwayCableTV", "portal": "https://www.hathway.com/ContactUs"},
-    "Excitel (Excitel Broadband Pvt Ltd)": {"email": "nodal@excitel.com", "industry": "Telecom", "regulator": "CCPA", "twitter": "@Excitel", "portal": "https://www.excitel.com/contact-us/"},
+    # TELECOM & BROADBAND (TRAI)
+    "Reliance Jio (Reliance Jio Infocomm Ltd)": {"email": "appellate@jio.com", "industry": "Telecom", "regulator": "TRAI", "twitter": "@JioCare", "portal": "https://www.jio.com/help/contact-us"},
+    "Bharti Airtel (Bharti Airtel Ltd)": {"email": "nodalofficer@airtel.com", "industry": "Telecom", "regulator": "TRAI", "twitter": "@Airtel_Presence", "portal": "https://www.airtel.in/help"},
+    "Vodafone Idea (Vi)": {"email": "appellate.officer@vodafoneidea.com", "industry": "Telecom", "regulator": "TRAI", "twitter": "@ViCustomerCare", "portal": "https://www.myvi.in/help-support"},
+    "BSNL (Bharat Sanchar Nigam Limited)": {"email": "cgm_hq@bsnl.co.in", "industry": "Telecom", "regulator": "TRAI", "twitter": "@BSNLCorporate", "portal": "https://www.bsnl.co.in/opencms/bsnl/BSNL/about_us/customer_care.html"},
+    "ACT Fibernet (Atria Convergence Technologies)": {"email": "nodal@actcorp.in", "industry": "Telecom", "regulator": "TRAI", "twitter": "@ACTFibernet", "portal": "https://www.actcorp.in/contact-us"},
+    "Hathway (Hathway Cable & Datacom Ltd)": {"email": "nodalofficer@hathway.net", "industry": "Telecom", "regulator": "TRAI", "twitter": "@HathwayCableTV", "portal": "https://www.hathway.com/ContactUs"},
+    "Excitel (Excitel Broadband Pvt Ltd)": {"email": "nodal@excitel.com", "industry": "Telecom", "regulator": "TRAI", "twitter": "@Excitel", "portal": "https://www.excitel.com/contact-us/"},
 
     # EDTECH (CCPA)
     "Byju's (Think & Learn Pvt Ltd)": {"email": "grievances@byjus.com", "industry": "EdTech", "regulator": "CCPA", "twitter": "@BYJUS", "portal": "https://byjus.com/contact-us/"},
@@ -117,12 +117,12 @@ VERIFIED_DB: dict[str, dict] = {
     "Simplilearn (Simplilearn Solutions Pvt Ltd)": {"email": "grievance@simplilearn.com", "industry": "EdTech", "regulator": "CCPA", "twitter": "@simplilearn", "portal": "https://www.simplilearn.com/contact-us"},
     "Cuemath (CueLearn Pvt Ltd)": {"email": "grievance@cuemath.com", "industry": "EdTech", "regulator": "CCPA", "twitter": "@cuemath", "portal": "https://www.cuemath.com/contact/"},
 
-    # AIRLINES (CCPA)
-    "IndiGo (InterGlobe Aviation Ltd)": {"email": "nodalofficer@goindigo.in", "industry": "Airlines", "regulator": "CCPA", "twitter": "@IndiGo6E", "portal": "https://www.goindigo.in/contact-us.html"},
-    "Air India (Air India Ltd)": {"email": "nodalofficer@airindia.com", "industry": "Airlines", "regulator": "CCPA", "twitter": "@airindia", "portal": "https://www.airindia.com/in/en/contact-us.html"},
-    "SpiceJet (SpiceJet Ltd)": {"email": "nodalofficer@spicejet.com", "industry": "Airlines", "regulator": "CCPA", "twitter": "@flyspicejet", "portal": "https://corporate.spicejet.com/contactus.aspx"},
-    "Akasa Air (SNV Aviation Pvt Ltd)": {"email": "nodalofficer@akasaair.com", "industry": "Airlines", "regulator": "CCPA", "twitter": "@AkasaAir", "portal": "https://www.akasaair.com/contact-us"},
-    "Air India Express (Air India Express Ltd)": {"email": "nodalofficer@airindiaexpress.com", "industry": "Airlines", "regulator": "CCPA", "twitter": "@FlyAIExpress", "portal": "https://www.airindiaexpress.com/contact-us"},
+    # AIRLINES (DGCA)
+    "IndiGo (InterGlobe Aviation Ltd)": {"email": "nodalofficer@goindigo.in", "industry": "Airlines", "regulator": "DGCA", "twitter": "@IndiGo6E", "portal": "https://www.goindigo.in/contact-us.html"},
+    "Air India (Air India Ltd)": {"email": "nodalofficer@airindia.com", "industry": "Airlines", "regulator": "DGCA", "twitter": "@airindia", "portal": "https://www.airindia.com/in/en/contact-us.html"},
+    "SpiceJet (SpiceJet Ltd)": {"email": "nodalofficer@spicejet.com", "industry": "Airlines", "regulator": "DGCA", "twitter": "@flyspicejet", "portal": "https://corporate.spicejet.com/contactus.aspx"},
+    "Akasa Air (SNV Aviation Pvt Ltd)": {"email": "nodalofficer@akasaair.com", "industry": "Airlines", "regulator": "DGCA", "twitter": "@AkasaAir", "portal": "https://www.akasaair.com/contact-us"},
+    "Air India Express (Air India Express Ltd)": {"email": "nodalofficer@airindiaexpress.com", "industry": "Airlines", "regulator": "DGCA", "twitter": "@FlyAIExpress", "portal": "https://www.airindiaexpress.com/contact-us"},
 
     # CONSUMER ELECTRONICS & HOME SERVICES (CCPA)
     "Samsung India (Samsung India Electronics)": {"email": "grievance.officer@samsung.com", "industry": "Electronics", "regulator": "CCPA", "twitter": "@SamsungIndia", "portal": "https://www.samsung.com/in/support/contact/"},
@@ -138,59 +138,162 @@ VERIFIED_DB: dict[str, dict] = {
     "Urban Company (UrbanClap Technologies)": {"email": "grievanceofficer@urbancompany.com", "industry": "Home Services", "regulator": "CCPA", "twitter": "@urbancompany_UC", "portal": "https://www.urbancompany.com/contact-us"}
 }
 
+# ── 3. RATE LIMITER & APP SETUP ──
 limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("⚡ Karma Claims v4.1 is online.")
+    logger.info("⚡ Karma Claims V5.0 (Master Merge) is online.")
     yield
 
-app = FastAPI(title="Karma Claims v4.1", lifespan=lifespan)
+app = FastAPI(title="Karma Claims v5.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
 client = AsyncGroq(api_key=API_KEY)
 
-@app.get("/health")
-async def health_check():
-    return {"status": "Live", "version": "4.1", "systems_online": 9}
+# ── 4. BOT PROTECTION & VALIDATION (From v2.6) ──
+_INJECTION_PATTERNS = [
+    "ignore above", "ignore previous", "disregard", "system:",
+    "###", "---", "```", "<|", "|>", "prompt:", "assistant:",
+    "override", "jailbreak", "forget instructions",
+]
 
 class DisputeRequest(BaseModel):
     user_name: str; user_email: EmailStr; user_phone: str; company_name: str; order_id: str; disputed_amount: str; complaint_details: str
-    @field_validator('disputed_amount')
-    def sanitize_amount(cls, v):
+
+    @field_validator("user_name", "company_name", "order_id", "complaint_details", "user_email", "user_phone", mode="before")
+    @classmethod
+    def must_not_be_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("All fields must be filled out.")
+        return v.strip()
+        
+    @field_validator("complaint_details", mode="before")
+    @classmethod
+    def sanitize_and_truncate(cls, v: str) -> str:
+        v_lower = v.lower()
+        for pattern in _INJECTION_PATTERNS:
+            if pattern in v_lower:
+                raise ValueError("Security Alert: Invalid characters or prompt injection detected.")
+        return v[:1000].strip()
+
+    @field_validator("disputed_amount")
+    @classmethod
+    def validate_amount(cls, v: str) -> str:
         clean = ''.join(filter(lambda x: x.isdigit() or x == '.', str(v)))
-        return clean if clean else "0"
+        try:
+            amount = float(clean)
+            if amount <= 0: raise ValueError("Amount must be greater than zero.")
+            return clean
+        except ValueError:
+            raise ValueError("Amount must be a valid number.")
 
 class ChatRequest(BaseModel): user_message: str
 class BSDetectorRequest(BaseModel): corporate_reply: str
 class OutcomeRequest(BaseModel): amount_recovered: float; company_name: str; has_screenshot: bool = False
 
+# ── 5. DYNAMIC AI PROMPT BUILDER (From v2.6) ──
+def build_system_prompt(industry: str, regulator: str) -> str:
+    regulatory_context = {
+        "Fintech": "Cite the 'RBI Circular on Limiting Liability of Customers in Unauthorised Electronic Banking Transactions'. Demand shadow credit within 10 working days or threaten escalation to the RBI Ombudsman at cms.rbi.org.in.",
+        "Banking": "Cite the 'RBI Banking Ombudsman Scheme 2006 (as amended in 2017)' and the Banking Regulation Act. Demand resolution within 30 days per RBI mandate or threaten direct escalation.",
+        "E-Commerce": "Cite 'Rule 4(4) and Rule 7 of the Consumer Protection (E-Commerce) Rules, 2020'. Threaten a Chargeback Dispute for 'Service Not Rendered' and invoke Section 9 of the Consumer Protection Act, 2019.",
+        "Quick Commerce": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Emphasize deficiency in rapid-delivery promises and threaten CCPA escalation for deceptive service.",
+        "Food Delivery": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Threaten escalation to the CCPA for deficiency of service and failure to provide paid goods.",
+        "Telecom": "Cite 'TRAI Telecom Consumers Complaint Redressal Regulations, 2012'. Threaten escalation to the Telecom Ombudsman (TRAI CGPDTM portal) and demand resolution per the 30-day mandate.",
+        "Airlines": "Cite 'DGCA Civil Aviation Requirements (CAR) Section 3, Series M, Part I' on Passenger Service. Threaten DGCA formal complaint and Ministry of Civil Aviation intervention.",
+        "Travel": "Cite the Consumer Protection Act, 2019. Threaten formal complaints to the CCPA for deceptive refund policies on travel bookings.",
+        "Mobility": "Cite the Consumer Protection (E-Commerce) Rules, 2020. Demand immediate refund for cancelled/defective rides or threaten formal CCPA action.",
+        "EdTech": "Cite 'UGC Guidelines on Online Courses' and Consumer Protection Act, 2019, Section 2(9) on product liability. Threaten escalation to the CCPA for predatory marketing.",
+        "Electronics": "Cite Section 2(9) of the Consumer Protection Act, 2019 regarding product liability and warranty enforcement. Threaten consumer court for selling defective goods."
+    }
+
+    industry_rule = regulatory_context.get(industry, "Cite the Consumer Protection Act, 2019, and relevant sector-specific regulations.")
+
+    return (
+        "You are a coldly strategic, fiercely effective Indian consumer rights advocate. "
+        "Your singular mission: extract an immediate refund or settlement for the consumer. "
+        "Draft a formal, legally intimidating grievance email that makes refunding immediately "
+        "appear far cheaper than the regulatory and reputational fallout of non-compliance.\n\n"
+        f"INDUSTRY: {industry} | PRIMARY REGULATOR: {regulator}\n\n"
+        f"REGULATORY ARSENAL:\n{industry_rule}\n\n"
+        "ADDITIONAL UNIVERSAL THREATS:\n"
+        "- If hidden charges exist: Cite 'CCPA Guidelines for Prevention and Regulation of Dark Patterns, 2023'.\n"
+        "- Mention potential Consumer Court filing under Section 34 of CPA 2019 if not resolved within 48 hours.\n\n"
+        "TONE: Coldly professional. Legally precise. Financially calculating. Zero emotion. Maximum pressure.\n"
+        "FORMAT: Begin with '[URGENT LEGAL NOTICE — 48-HOUR RESOLUTION REQUIRED]'. "
+        "Use numbered sections. "
+        "Keep it concise. Do not exceed 250 words. Do not add pleasantries."
+    )
+
+# ── 6. ENDPOINTS ──
+@app.get("/health")
+async def health_check():
+    return {"status": "Live", "version": "5.0", "systems_online": 9}
+
+@app.get("/")
+@app.head("/")
+async def root():
+    return {"message": "Karma Claims API Engine v5.0 is online and operational."}
+
 @app.post("/generate-draft")
 @limiter.limit("5/minute")
 async def generate_legal_draft(request: Request, payload: DisputeRequest):
-    legal_framework = "Consumer Protection Act (CCPA) 2019"
-    if payload.company_name in VERIFIED_DB and VERIFIED_DB[payload.company_name].get("regulator") == "RBI":
-        legal_framework = "Reserve Bank of India (RBI) rules for unauthorized transactions"
+    # Safe Fallback for custom companies
+    target_data = VERIFIED_DB.get(payload.company_name, {"email": "support@company.com", "industry": "General Retail", "regulator": "CCPA"})
+    
+    target_email = target_data["email"]
+    industry = target_data["industry"]
+    regulator = target_data["regulator"]
 
-    prompt = f"""You are a fierce Indian corporate lawyer. Draft a formal legal grievance notice for {payload.user_name} against {payload.company_name}.
-    Details: Order ID {payload.order_id}, Amount ₹{payload.disputed_amount}. Complaint: {payload.complaint_details}
-    Rules:
-    1. Base threats strictly on the {legal_framework}.
-    2. Demand a resolution within 48 hours or threaten escalation to the Nodal Officer/Ombudsman.
-    3. Keep it highly professional, intimidating, and ready to send. No placeholders.
-    4. Sign off with: {payload.user_name} | Ph: {payload.user_phone}"""
+    system_prompt = build_system_prompt(industry, regulator)
+
+    user_message = (
+        f"TARGET ENTITY: {payload.company_name}\n"
+        f"INDUSTRY: {industry} | REGULATOR: {regulator}\n"
+        f"ORDER/TRANSACTION ID: {payload.order_id}\n"
+        f"DISPUTED AMOUNT: ₹{payload.disputed_amount}\n"
+        f"CONSUMER NAME: {payload.user_name}\n"
+        f"CONSUMER PHONE: {payload.user_phone}\n"
+        f"CONSUMER EMAIL: {payload.user_email}\n\n"
+        f"INCIDENT DESCRIPTION:\n{payload.complaint_details}"
+    )
+
     try:
         response = await client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": "You are a legal AI."}, {"role": "user", "content": prompt}],
-            temperature=0.3, max_tokens=600
+            messages=[
+                {"role": "system", "content": system_prompt + "\nDO NOT add a signature block at the end. The system will append it."},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.25, max_tokens=1024, top_p=0.9
         )
-        target_email = VERIFIED_DB.get(payload.company_name, {}).get("email", "support@company.com")
-        return {"draft": response.choices[0].message.content.strip(), "target_email": target_email}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Engine overloaded. Please try again.")
+        
+        # 1. Grab Raw AI Draft
+        raw_draft = response.choices[0].message.content.strip()
+        
+        # 2. Hardcode the Signature (From v2.6)
+        signature_block = (
+            "\n\nSincerely,\n"
+            f"{payload.user_name}\n"
+            f"Phone: {payload.user_phone}\n"
+            f"Email: {payload.user_email}"
+        )
+        
+        # 3. Combine
+        draft_body = raw_draft + signature_block
+
+        # 4. Generate Professional Subject Line
+        company_short = payload.company_name.split("(")[0].strip()
+        subject_line = f"URGENT LEGAL NOTICE | {company_short} | Ref: {payload.order_id} | ₹{payload.disputed_amount}"
+
+        return {"target_email": target_email, "subject": subject_line, "draft": draft_body}
+
+    except Exception as e:
+        logger.error(f"Groq API failure | error={str(e)}")
+        raise HTTPException(status_code=502, detail="Strike engine unavailable. Please retry in a moment.")
 
 @app.get("/api/dashboard")
 async def get_dashboard_stats():
@@ -227,7 +330,7 @@ async def get_deadlines(company_name: str):
         return {
             "level_1_deadline": (today + timedelta(days=7)).strftime("%Y-%m-%d"),
             "consumer_court_date": (today + timedelta(days=30)).strftime("%Y-%m-%d"),
-            "warning": "CCPA Rule: If no refund by Day 30, file via e-Daakhil.",
+            "warning": f"{reg} Rule: If no refund by Day 30, file via e-Daakhil or respective portal.",
             "unverified": False
         }
 
@@ -237,7 +340,7 @@ async def karma_chat(request: Request, payload: ChatRequest):
     try:
         response = await client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": "You are Karma AI. Give sharp, 2-sentence legal pushbacks to corporate delays using RBI/CCPA rules."}, {"role": "user", "content": payload.user_message}],
+            messages=[{"role": "system", "content": "You are Karma AI. Give sharp, 2-sentence legal pushbacks to corporate delays using Indian consumer rules."}, {"role": "user", "content": payload.user_message}],
             temperature=0.4, max_tokens=300
         )
         return {"reply": response.choices[0].message.content.strip()}
