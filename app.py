@@ -135,7 +135,14 @@ VERIFIED_DB: dict[str, dict] = {
     "LG India (LG Electronics India Pvt Ltd)": {"email": "grievance.officer@lge.com", "industry": "Electronics", "regulator": "CCPA", "twitter": "@LGIndia", "portal": "https://www.lg.com/in/support/contact/"},
     "Sony India (Sony India Pvt Ltd)": {"email": "sonyindia.care@sony.com", "industry": "Electronics", "regulator": "CCPA", "twitter": "@sony_india", "portal": "https://www.sony.co.in/electronics/support"},
     "boAt Lifestyle (Imagine Marketing Ltd)": {"email": "grievance.officer@imaginemarketingindia.com", "industry": "Electronics", "regulator": "CCPA", "twitter": "@RockWithboAt", "portal": "https://www.boat-lifestyle.com/pages/contact-us"},
-    "Urban Company (UrbanClap Technologies)": {"email": "grievanceofficer@urbancompany.com", "industry": "Home Services", "regulator": "CCPA", "twitter": "@urbancompany_UC", "portal": "https://www.urbancompany.com/contact-us"}
+    "Urban Company (UrbanClap Technologies)": {"email": "grievanceofficer@urbancompany.com", "industry": "Home Services", "regulator": "CCPA", "twitter": "@urbancompany_UC", "portal": "https://www.urbancompany.com/contact-us"},
+
+    # CYBER CRIME & SOCIAL MEDIA (IT Rules 2026)
+    "National Cyber Crime Reporting Portal (MHA)": {"email": "complaint-cyber@gov.in", "industry": "Cyber Crime", "regulator": "MHA", "twitter": "@CyberDost", "portal": "https://cybercrime.gov.in/"},
+    "Meta Grievance Officer (Facebook/Instagram)": {"email": "grievance_officer_india@meta.com", "industry": "Cyber Crime", "regulator": "MeitY", "twitter": "@MetaIndia", "portal": "https://www.facebook.com/help/"},
+    "WhatsApp Grievance Officer": {"email": "grievance_officer_wa@support.whatsapp.com", "industry": "Cyber Crime", "regulator": "MeitY", "twitter": "@WhatsApp", "portal": "https://www.whatsapp.com/contact/"},
+    "Google India Grievance Officer (YouTube/Search)": {"email": "support-in@google.com", "industry": "Cyber Crime", "regulator": "MeitY", "twitter": "@GoogleIndia", "portal": "https://support.google.com/"},
+    "X (Twitter) Grievance Officer": {"email": "grievance-officer-in@twitter.com", "industry": "Cyber Crime", "regulator": "MeitY", "twitter": "@XSupport", "portal": "https://help.twitter.com/"}
 }
 
 # ── 3. RATE LIMITER & APP SETUP ──
@@ -190,12 +197,20 @@ class DisputeRequest(BaseModel):
         except ValueError:
             raise ValueError("Amount must be a valid number.")
 
+class TriageMessage(BaseModel):
+    role: str
+    content: str
+
+class TriageRequest(BaseModel):
+    user_message: str
+    chat_history: list[TriageMessage] = []
+
 class ChatRequest(BaseModel): user_message: str
 class BSDetectorRequest(BaseModel): corporate_reply: str
 class OutcomeRequest(BaseModel): amount_recovered: float; company_name: str; has_screenshot: bool = False
 
 # ── 5. DYNAMIC AI PROMPT BUILDER (Litigator Logic) ──
-def build_system_prompt(industry: str, regulator: str) -> str:
+def build_system_prompt(industry: str, regulator: str, amount: float = 0) -> str:
     # Deeply researched, highly intimidating legal arsenals based strictly on Indian Law.
     regulatory_context = {
         "Fintech": (
@@ -249,12 +264,20 @@ def build_system_prompt(industry: str, regulator: str) -> str:
         "Electronics": (
             "You MUST cite 'Section 2(34) [Product Liability]' and 'Section 2(11) [Deficiency in Service]' of the Consumer Protection Act, 2019. "
             "Demand immediate replacement or refund, threatening litigation at the District Consumer Commission for selling defective goods."
+        ),
+        "Cyber Crime": (
+            "You MUST cite 'Rule 3(1)(d) and Rule 4(4)(a) of the IT Amendment Rules, 2026'. "
+            "Demand immediate takedown of the fraudulent content or fake profile within the STATUTORY 3-HOUR WINDOW. "
+            "Threaten loss of 'Safe Harbour' protection under Section 79 of the IT Act for failure to comply by the 180-minute deadline."
         )
     }
 
     industry_rule = regulatory_context.get(industry, "Cite 'Section 2(11) [Deficiency in Service]' and 'Section 2(47) [Unfair Trade Practice]' of the Consumer Protection Act, 2019.")
 
-    # STRICT ISOLATION: AI will only see the threat associated with the specific regulator.
+    rbi_hammer = ""
+    if regulator == "RBI" and 0 < amount <= 25000:
+        rbi_hammer = "MANDATORY RBI DIRECTIVE: Because the disputed amount is under INR 25,000, you MUST demand immediate 'No-Questions-Asked' compensation from the DEA Fund as per the Feb 2026 RBI Framework. "
+
     if regulator == "RBI":
         escalation_threat = "Threaten direct legal escalation to the RBI Ombudsman via cms.rbi.org.in, filing a grievance on CPGRAMS (Ministry of Finance), and reporting to CIBIL for institutional negligence. DO NOT mention the CCPA."
     elif regulator == "DGCA":
@@ -270,6 +293,7 @@ def build_system_prompt(industry: str, regulator: str) -> str:
         "Your goal is to strike fear into the Nodal Officer/Legal Team of the target company by proving that the legal, penal, and reputational costs of ignoring this notice will vastly exceed the refund amount.\n\n"
         f"INDUSTRY: {industry} | PRIMARY REGULATOR: {regulator}\n\n"
         f"EXACT LEGAL SECTIONS TO CITE (MANDATORY):\n{industry_rule}\n\n"
+        f"{rbi_hammer}\n"
         f"ESCALATION THREAT TO USE:\n{escalation_threat}\n\n"
         "STRICT RULES FOR DRAFTING:\n"
         f"1. REGULATORY ISOLATION: You MUST frame the entire argument strictly around {regulator} laws. Do NOT mention other regulators.\n"
@@ -300,7 +324,7 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
     industry = target_data["industry"]
     regulator = target_data["regulator"]
 
-    system_prompt = build_system_prompt(industry, regulator)
+    system_prompt = build_system_prompt(industry, regulator, float(payload.disputed_amount))
 
     user_message = (
         f"TARGET ENTITY: {payload.company_name}\n"
@@ -387,6 +411,48 @@ async def get_deadlines(company_name: str):
             "warning": f"{reg} Rule: If no refund by Day 30, file via e-Daakhil or respective portal.",
             "unverified": False
         }
+
+@app.post("/api/triage-chat")
+@limiter.limit("10/minute")
+async def triage_copilot(request: Request, payload: TriageRequest):
+    try:
+        system_prompt = """
+        You are the Intake Paralegal for Karma Claims. Your job is to extract 4 required variables from the user's story so we can draft a legal notice.
+        Do NOT offer legal advice. Do NOT generate the final notice. Keep replies under 3 sentences. Be authoritative.
+        
+        REQUIRED VARIABLES FOR EVERY CATEGORY:
+        1. Company/Target Name
+        2. User's Full Name
+        3. Disputed Amount (If no financial loss, use 0)
+        4. Transaction ID / Order ID / PNR / Link to fake profile
+        
+        INSTRUCTIONS:
+        - Check if the user has provided ALL 4 variables. 
+        - If ANY are missing, strictly ask for them. (e.g., "To file this under the RBI framework, I strictly need your Name and the Transaction ID.")
+        - If ALL 4 are provided, reply EXACTLY with this format:
+        [READY_FOR_DRAFT] | {"company_name": "X", "user_name": "Y", "disputed_amount": "Z", "order_id": "W"}
+        """
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in payload.chat_history:
+            messages.append({"role": msg.role, "content": msg.content})
+        messages.append({"role": "user", "content": payload.user_message})
+
+        response = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            temperature=0.2, max_tokens=250
+        )
+        bot_reply = response.choices[0].message.content
+
+        if "[READY_FOR_DRAFT]" in bot_reply:
+            json_str = bot_reply.split("|")[1].strip()
+            return {"status": "complete", "reply": "All details secured. Compiling your legal notice now...", "extracted_data": json_str}
+        
+        return {"status": "asking", "reply": bot_reply}
+
+    except Exception as e:
+        logger.error(f"Triage Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Intake Copilot offline.")
 
 @app.post("/api/chat")
 @limiter.limit("10/minute")
