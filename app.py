@@ -200,14 +200,15 @@ def build_system_prompt(industry: str, regulator: str) -> str:
     regulatory_context = {
         "Fintech": (
             "You MUST cite the 'Reserve Bank - Integrated Ombudsman Scheme (RB-IOS), 2021'. "
-            "Explicitly invoke the RBI Circular 'Harmonisation of Turnaround Time (TAT) and customer compensation for failed transactions' (DPSS.CO.PD No.629/02.01.014/2019-20), demanding the mandatory penalty of INR 100 per day for delay beyond the prescribed TAT. "
-            "Also cite the 'RBI Circular on Limiting Liability of Customers in Unauthorised Electronic Banking Transactions'. "
-            "Accuse them of 'misappropriation of funds' and 'gross deficiency in financial services'."
+            "Invoke the 'RBI Digital Fraud Compensation Framework (Feb 2026)' and the landmark ruling 'Roopam Kumar v. SBI Cards' regarding the bank's duty of care. "
+            "Explicitly demand an immediate 'Shadow Reversal' (provisional credit) within 10 working days as per the Feb 2026 Zero Liability guidelines. "
+            "Cite the RBI Circular 'Harmonisation of Turnaround Time (TAT)' demanding the mandatory INR 100/day penalty for delays."
         ),
         "Banking": (
             "You MUST cite the 'Reserve Bank - Integrated Ombudsman Scheme (RB-IOS), 2021' and Section 35A of the Banking Regulation Act, 1949. "
-            "Invoke the RBI Circular on 'Harmonisation of Turnaround Time (TAT)' demanding the INR 100 per day penalty for delayed refunds. "
-            "Threaten to report the branch and nodal officer to the Consumer Education and Protection Department (CEPD) of the RBI for 'wilful negligence and breach of fiduciary duty'."
+            "Invoke the 'RBI Digital Fraud Compensation Framework (Feb 2026)' and the 'Roopam Kumar v. SBI Cards' ruling. "
+            "Forcefully demand an immediate 'Shadow Reversal' of the disputed funds within 10 days, citing the 3-day 'Golden Window' for zero customer liability. "
+            "Threaten to report the branch and nodal officer to the CEPD of the RBI for Institutional Negligence."
         ),
         "E-Commerce": (
             "You MUST cite 'Section 2(11) [Deficiency in Service]' and 'Section 2(47) [Unfair Trade Practice]' of the Consumer Protection Act, 2019. "
