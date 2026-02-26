@@ -509,82 +509,76 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
-     # --- 1. THE FREE RAG SEARCH (Upgraded Router & Timeout) ---
+        # --- 1. THE FREE RAG SEARCH (Math Brain) ---
         hf_api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
         hf_token = os.getenv("HF_TOKEN")
         headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
         
-        # Added a 20-second timeout to survive the HuggingFace "Cold Start"
+        query_vector = [0.0] * 384
+        # 20-second timeout allows the free API to "wake up"
         async with httpx.AsyncClient(timeout=20.0) as http_client:
             hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": payload.user_message})
-            
-        if hf_response.status_code != 200:
-            logger.error(f"HuggingFace API Blocked: {hf_response.status_code} - {hf_response.text}")
-            query_vector = [0.0] * 384 # Fallback if free API is temporarily busy
-        else:
-            query_vector = hf_response.json()
-            if isinstance(query_vector, list) and len(query_vector) > 0 and isinstance(query_vector[0], list): 
-                query_vector = query_vector[0] # Flatten nested array
-        
+            if hf_response.status_code == 200:
+                res_json = hf_response.json()
+                if isinstance(res_json, list) and len(res_json) > 0:
+                    query_vector = res_json[0] if isinstance(res_json[0], list) else res_json
+
         # --- 2. PULL THE LAW FROM SUPABASE ---
-        legal_context = "\n\n(No specific statute matched. Rely strictly on CPA 2019 Deficiency in Service)."
-        
-        if supabase and query_vector != [0.0] * 384:
+        legal_context = ""
+        if supabase and any(v != 0.0 for v in query_vector):
             try:
-                # LOWERED threshold to 0.10 and INCREASED match_count to 3
-                legal_matches = supabase.rpc(
-                    'match_legal_documents', 
-                    {'query_embedding': query_vector, 'match_threshold': 0.10, 'match_count': 3}
-                ).execute()
+                # Lowered threshold to 0.10 to ensure we catch specific laws like RBI/DGCA
+                matches = supabase.rpc('match_legal_documents', {
+                    'query_embedding': query_vector, 
+                    'match_threshold': 0.10, 
+                    'match_count': 3
+                }).execute()
                 
-                # --- 3. ASSEMBLE THE CONTEXT ---
-                if legal_matches.data:
-                    legal_context = "\n\n📜 RELEVANT INDIAN LAW RETRIEVED FROM DATABASE:\n"
-                    for match in legal_matches.data:
-                        legal_context += f"- Source: {match['document_title']}\n  Exact Clause: {match['content']}\n"
-            except Exception as db_err:
-                logger.error(f"Supabase Search Error: {str(db_err)}")
+                if matches.data:
+                    for m in matches.data:
+                        legal_context += f"- Law Source: {m['document_title']}\n  Clause: {m['content']}\n"
+            except Exception as e:
+                logger.error(f"DB Search Error: {e}")
 
-        # --- 4. THE INVINCIBLE PROMPT (High-Intensity Version) ---
+        # --- 3. THE INVINCIBLE PROMPT ---
         system_prompt = f"""
-        You are the Karma Claims 'Invincible Litigator'. Your goal is to destroy corporate excuses using the provided law.
-        
-        STRICT RULES:
-        1. If the 'LEGAL CONTEXT' below contains a specific penalty (like ₹100/day) or cap (like ₹100 max), YOU MUST USE IT.
-        2. Do NOT mention the Consumer Protection Act unless no other specific law is found in the context.
-        3. Be aggressive. Tell the user exactly how much money the company owes them in penalties.
-        4. Do NOT hallucinate or invent laws.
+        You are the Karma Claims 'Invincible Litigator'. Your ONLY source of truth is the 'LEGAL CONTEXT' below.
 
-        LEGAL CONTEXT FROM YOUR DATABASE:
-        {legal_context}
+        STRICT PROTOCOLS:
+        1. If context contains a penalty (e.g., ₹100/day, ₹10,000 compensation), YOU MUST cite it as the main weapon.
+        2. State the law as a cold, aggressive fact. Never say "I couldn't find a law."
+        3. If no match is found, rely ONLY on Consumer Protection Act 2019 "Deficiency in Service."
+        4. NEVER invent laws. Keep to 3 sentences.
+
+        LEGAL CONTEXT FROM DATABASE:
+        {legal_context if legal_context else "No specific statute matched. Use CPA 2019 Deficiency in Service."}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
 
-        # --- 5. VISION AI ROUTING ---
+        # --- 4. VISION AI ROUTING ---
         if payload.image_base64:
             messages.append({
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": payload.user_message if payload.user_message else "Analyze this corporate email or screenshot and give me a strict legal counter-argument."},
+                    {"type": "text", "text": payload.user_message or "Analyze this legal document."},
                     {"type": "image_url", "image_url": {"url": payload.image_base64}}
                 ]
             })
-            active_model = "llama-3.2-90b-vision-preview"
+            model_to_use = "llama-3.2-11b-vision-preview"
         else:
             messages.append({"role": "user", "content": payload.user_message})
-            active_model = "llama-3.3-70b-versatile"
+            model_to_use = "llama-3.3-70b-versatile"
 
+        # TEMPERATURE 0.0 ensures the AI stays factual and doesn't hallucinate
         response = await client.chat.completions.create(
-            model=active_model,
-            messages=messages,
-            temperature=0.2, max_tokens=300
+            model=model_to_use, messages=messages, temperature=0.0, max_tokens=400
         )
         return {"reply": response.choices[0].message.content.strip()}
         
     except Exception as e:
-        logger.error(f"Chat Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"API Error: {str(e)}")
+        logger.error(f"Chat Error: {e}")
+        return {"reply": "⚠️ The Strategist is recalibrating. Please try again in 10 seconds."}
 
 @app.post("/api/detect-bs")
 @limiter.limit("5/minute")
