@@ -509,15 +509,17 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
-        # --- 1. THE FREE RAG SEARCH ---
-        hf_api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+     # --- 1. THE FREE RAG SEARCH (Upgraded Router & Timeout) ---
+        hf_api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
         hf_token = os.getenv("HF_TOKEN")
         headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
         
-        async with httpx.AsyncClient() as http_client:
+        # Added a 20-second timeout to survive the HuggingFace "Cold Start"
+        async with httpx.AsyncClient(timeout=20.0) as http_client:
             hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": payload.user_message})
             
         if hf_response.status_code != 200:
+            logger.error(f"HuggingFace API Blocked: {hf_response.status_code} - {hf_response.text}")
             query_vector = [0.0] * 384 # Fallback if free API is temporarily busy
         else:
             query_vector = hf_response.json()
@@ -529,9 +531,10 @@ async def karma_chat(request: Request, payload: ChatRequest):
         
         if supabase and query_vector != [0.0] * 384:
             try:
+                # LOWERED threshold to 0.10 and INCREASED match_count to 3
                 legal_matches = supabase.rpc(
                     'match_legal_documents', 
-                    {'query_embedding': query_vector, 'match_threshold': 0.25, 'match_count': 2}
+                    {'query_embedding': query_vector, 'match_threshold': 0.10, 'match_count': 3}
                 ).execute()
                 
                 # --- 3. ASSEMBLE THE CONTEXT ---
