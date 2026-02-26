@@ -6,3 +6,4 @@ groq
 slowapi
 supabase
 httpx
+email-validator
