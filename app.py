@@ -11,9 +11,10 @@ from groq import AsyncGroq
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from supabase import create_client, Client
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ⚡ KARMA CLAIMS — ENGINE v5.1 (LITIGATOR EDITION)
+# ⚡ KARMA CLAIMS — ENGINE v5.2 (VISION & LEAD EDITION)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s")
@@ -25,6 +26,16 @@ if not API_KEY:
     raise RuntimeError("[FATAL] GROQ_API_KEY is not set.")
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+# --- NEW: SUPABASE DB INITIALIZATION ---
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client | None = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    logger.info("Supabase Data Connection: ACTIVE")
+else:
+    logger.warning("Supabase Data Connection: INACTIVE (Missing Keys)")
 
 # ── 1. THE LIVING SCOREBOARD ──
 SESSION_WINS = 0
@@ -150,17 +161,17 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("⚡ Karma Claims V5.1 (Litigator Edition) is online.")
+    logger.info("⚡ Karma Claims V5.2 (Vision & Lead Edition) is online.")
     yield
 
-app = FastAPI(title="Karma Claims v5.1", lifespan=lifespan)
+app = FastAPI(title="Karma Claims v5.2", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
 client = AsyncGroq(api_key=API_KEY)
 
-# ── 4. BOT PROTECTION & VALIDATION ──
+# ── 4. BOT PROTECTION & VALIDATION (Updated for Vision) ──
 _INJECTION_PATTERNS = [
     "ignore above", "ignore previous", "disregard", "system:",
     "###", "---", "```", "<|", "|>", "prompt:", "assistant:",
@@ -197,6 +208,7 @@ class DisputeRequest(BaseModel):
         except ValueError:
             raise ValueError("Amount must be a valid number.")
 
+# --- NEW: Added image_base64 to support Vision uploads ---
 class TriageMessage(BaseModel):
     role: str
     content: str
@@ -204,14 +216,17 @@ class TriageMessage(BaseModel):
 class TriageRequest(BaseModel):
     user_message: str
     chat_history: list[TriageMessage] = []
+    image_base64: str | None = None  
 
-class ChatRequest(BaseModel): user_message: str
+class ChatRequest(BaseModel): 
+    user_message: str
+    image_base64: str | None = None  
+
 class BSDetectorRequest(BaseModel): corporate_reply: str
 class OutcomeRequest(BaseModel): amount_recovered: float; company_name: str; has_screenshot: bool = False
 
 # ── 5. DYNAMIC AI PROMPT BUILDER (Litigator Logic) ──
 def build_system_prompt(industry: str, regulator: str, amount: float = 0) -> str:
-    # Deeply researched, highly intimidating legal arsenals based strictly on Indian Law.
     regulatory_context = {
         "Fintech": (
             "You MUST cite the 'Reserve Bank - Integrated Ombudsman Scheme (RB-IOS), 2021'. "
@@ -296,7 +311,7 @@ def build_system_prompt(industry: str, regulator: str, amount: float = 0) -> str
         f"{rbi_hammer}\n"
         f"ESCALATION THREAT TO USE:\n{escalation_threat}\n\n"
         "STRICT RULES FOR DRAFTING:\n"
-        f"1. REGULATORY ISOLATION: You MUST frame the entire argument strictly around {regulator} laws. Do NOT mention other regulators.\n"
+        "1. REGULATORY ISOLATION: You MUST frame the entire argument strictly around {regulator} laws. Do NOT mention other regulators.\n"
         "2. LEGAL TONE: Use heavy legal jargon (e.g., 'breach of fiduciary duty', 'wilful negligence', 'statutory violation', 'deficiency in service under Section 2(11)'). Do not sound like an angry customer; sound like a ruthless lawyer.\n"
         "3. FORMAT: Use a strict legal notice structure with ALL-CAPS headers (e.g., STATEMENT OF FACTS, STATUTORY VIOLATIONS, PRAYER FOR RELIEF).\n"
         "4. PLAIN TEXT ONLY: Do NOT use markdown, asterisks (**), or bolding. Just use plain text.\n"
@@ -307,12 +322,12 @@ def build_system_prompt(industry: str, regulator: str, amount: float = 0) -> str
 # ── 6. ENDPOINTS ──
 @app.get("/health")
 async def health_check():
-    return {"status": "Live", "version": "5.1", "systems_online": 9}
+    return {"status": "Live", "version": "5.2", "systems_online": 10}
 
 @app.get("/")
 @app.head("/")
 async def root():
-    return {"message": "Karma Claims API Engine v5.1 is online and operational."}
+    return {"message": "Karma Claims API Engine v5.2 is online and operational."}
 
 @app.post("/generate-draft")
 @limiter.limit("5/minute")
@@ -323,6 +338,31 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
     target_email = target_data["email"]
     industry = target_data["industry"]
     regulator = target_data["regulator"]
+
+    # --- NEW: SUPABASE DATA CAPTURE (E-DAAKHIL 30-DAY FUNNEL) ---
+    if supabase:
+        try:
+            # Check if user exists, if not create them
+            user_res = supabase.table('users').select('*').eq('email', payload.user_email).execute()
+            if not user_res.data:
+                new_user = supabase.table('users').insert({
+                    "email": payload.user_email,
+                    "phone": payload.user_phone
+                }).execute()
+                user_id = new_user.data[0]['id']
+            else:
+                user_id = user_res.data[0]['id']
+            
+            # Log the case to trigger the 30-Day automated email later
+            supabase.table('cases').insert({
+                "user_id": user_id,
+                "target_company": payload.company_name,
+                "disputed_amount": str(payload.disputed_amount),
+                "legal_rationale": f"Generated via {industry} logic",
+                "status": "Pending 30-Day Window"
+            }).execute()
+        except Exception as e:
+            logger.error(f"Supabase tracking failed: {str(e)}")
 
     system_prompt = build_system_prompt(industry, regulator, float(payload.disputed_amount))
 
@@ -344,14 +384,12 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
             temperature=0.25, max_tokens=1024, top_p=0.9
         )
         
-        # 1. Grab Raw AI Draft and strip hallucinations
         raw_draft = response.choices[0].message.content.strip()
         if "Sincerely" in raw_draft:
             raw_draft = raw_draft.split("Sincerely")[0].strip()
         if "Regards" in raw_draft:
             raw_draft = raw_draft.split("Regards")[0].strip()
         
-        # 2. Hardcode the Proofs & Signature (From v2.6)
         signature_block = (
             "\n\nPlease find attached the relevant transaction proofs, screenshots, and evidence supporting this claim.\n\n"
             "Sincerely,\n"
@@ -360,10 +398,8 @@ async def generate_legal_draft(request: Request, payload: DisputeRequest):
             f"Email: {payload.user_email}"
         )
         
-        # 3. Combine
         draft_body = raw_draft + signature_block
 
-        # 4. Generate Professional Subject Line
         company_short = payload.company_name.split("(")[0].strip()
         subject_line = f"URGENT PRE-LITIGATION NOTICE | {company_short} | Ref: {payload.order_id} | ₹{payload.disputed_amount}"
 
@@ -416,11 +452,12 @@ async def get_deadlines(company_name: str):
 @limiter.limit("10/minute")
 async def triage_copilot(request: Request, payload: TriageRequest):
     try:
+        # --- NEW: STRONG BRAIN INTAKE LOGIC ---
         system_prompt = """
-        You are the Intake Paralegal for Karma Claims. Your job is to extract 4 required variables from the user's story so we can draft a legal notice.
-        Do NOT offer legal advice. Do NOT generate the final notice. Keep replies under 3 sentences. Be authoritative.
+        You are the Intake Paralegal for Karma Claims. Your job is to extract 4 required variables from the user's story or screenshot so we can draft a legal notice.
+        Do NOT offer legal advice. Do NOT generate the final notice. Keep replies under 3 sentences.
         
-        REQUIRED VARIABLES FOR EVERY CATEGORY:
+        REQUIRED VARIABLES:
         1. Company/Target Name
         2. User's Full Name
         3. Disputed Amount (If no financial loss, use 0)
@@ -428,17 +465,30 @@ async def triage_copilot(request: Request, payload: TriageRequest):
         
         INSTRUCTIONS:
         - Check if the user has provided ALL 4 variables. 
-        - If ANY are missing, strictly ask for them. (e.g., "To file this under the RBI framework, I strictly need your Name and the Transaction ID.")
+        - If ANY are missing, strictly ask for them. 
         - If ALL 4 are provided, reply EXACTLY with this format:
         [READY_FOR_DRAFT] | {"company_name": "X", "user_name": "Y", "disputed_amount": "Z", "order_id": "W"}
         """
         messages = [{"role": "system", "content": system_prompt}]
         for msg in payload.chat_history:
             messages.append({"role": msg.role, "content": msg.content})
-        messages.append({"role": "user", "content": payload.user_message})
+
+        # --- NEW: VISION AI ROUTING ---
+        if payload.image_base64:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": payload.user_message if payload.user_message else "Analyze this screenshot. Extract the Company Name, Disputed Amount, Order/Transaction ID if visible."},
+                    {"type": "image_url", "image_url": {"url": payload.image_base64}}
+                ]
+            })
+            active_model = "llama-3.2-90b-vision-preview"
+        else:
+            messages.append({"role": "user", "content": payload.user_message})
+            active_model = "llama-3.3-70b-versatile"
 
         response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=active_model,
             messages=messages,
             temperature=0.2, max_tokens=250
         )
@@ -458,9 +508,33 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
+        # --- NEW: STRONG BRAIN LITIGATOR RULES FOR CHAT ---
+        system_prompt = """
+        You are Karma AI, a Senior Legal Strategist. Use these 2026 Logic Filters:
+        1. GATEKEEPER RULE: If a platform provides a UI button for a task, they are liable for its failure.
+        2. DARK PATTERN RULE: Identify 'Subscription Traps' (CCPA violation).
+        3. PROMISE FILTER: If support promised a fix and failed, it is a formal 'Deficiency in Service'.
+        Give sharp, 2-sentence legal pushbacks to corporate delays. Do not accept excuses.
+        """
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # --- NEW: VISION AI ROUTING ---
+        if payload.image_base64:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": payload.user_message if payload.user_message else "Analyze this corporate email or screenshot and give me a strict legal counter-argument."},
+                    {"type": "image_url", "image_url": {"url": payload.image_base64}}
+                ]
+            })
+            active_model = "llama-3.2-90b-vision-preview"
+        else:
+            messages.append({"role": "user", "content": payload.user_message})
+            active_model = "llama-3.3-70b-versatile"
+
         response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": "You are Karma AI. Give sharp, 2-sentence legal pushbacks to corporate delays using Indian consumer rules."}, {"role": "user", "content": payload.user_message}],
+            model=active_model,
+            messages=messages,
             temperature=0.4, max_tokens=300
         )
         return {"reply": response.choices[0].message.content.strip()}
