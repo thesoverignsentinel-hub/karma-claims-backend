@@ -5,3 +5,5 @@ python-dotenv==1.0.0
 slowapi==0.1.9
 groq
 supabase
+sentence-transformers==3.0.1
+torch==2.3.1
