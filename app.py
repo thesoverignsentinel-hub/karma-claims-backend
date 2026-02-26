@@ -509,11 +509,13 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
-        # --- 1. THE FREE RAG SEARCH (Zero-Cost Vector Math via HuggingFace) ---
+        # --- 1. THE FREE RAG SEARCH ---
         hf_api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+        hf_token = os.getenv("HF_TOKEN")
+        headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
         
         async with httpx.AsyncClient() as http_client:
-            hf_response = await http_client.post(hf_api_url, json={"inputs": payload.user_message})
+            hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": payload.user_message})
             
         if hf_response.status_code != 200:
             query_vector = [0.0] * 384 # Fallback if free API is temporarily busy
