@@ -1,6 +1,7 @@
 import os
 import logging
 import random
+import httpx
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
@@ -508,17 +509,54 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
-        # --- NEW: STRONG BRAIN LITIGATOR RULES FOR CHAT ---
-        system_prompt = """
-        You are Karma AI, a Senior Legal Strategist. Use these 2026 Logic Filters:
-        1. GATEKEEPER RULE: If a platform provides a UI button for a task, they are liable for its failure.
-        2. DARK PATTERN RULE: Identify 'Subscription Traps' (CCPA violation).
-        3. PROMISE FILTER: If support promised a fix and failed, it is a formal 'Deficiency in Service'.
-        Give sharp, 2-sentence legal pushbacks to corporate delays. Do not accept excuses.
+        # --- 1. THE FREE RAG SEARCH (Zero-Cost Vector Math via HuggingFace) ---
+        hf_api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+        
+        async with httpx.AsyncClient() as http_client:
+            hf_response = await http_client.post(hf_api_url, json={"inputs": payload.user_message})
+            
+        if hf_response.status_code != 200:
+            query_vector = [0.0] * 384 # Fallback if free API is temporarily busy
+        else:
+            query_vector = hf_response.json()
+            if isinstance(query_vector, list) and len(query_vector) > 0 and isinstance(query_vector[0], list): 
+                query_vector = query_vector[0] # Flatten nested array
+        
+        # --- 2. PULL THE LAW FROM SUPABASE ---
+        legal_context = "\n\n(No specific statute matched. Rely strictly on CPA 2019 Deficiency in Service)."
+        
+        if supabase and query_vector != [0.0] * 384:
+            try:
+                legal_matches = supabase.rpc(
+                    'match_legal_documents', 
+                    {'query_embedding': query_vector, 'match_threshold': 0.25, 'match_count': 2}
+                ).execute()
+                
+                # --- 3. ASSEMBLE THE CONTEXT ---
+                if legal_matches.data:
+                    legal_context = "\n\n📜 RELEVANT INDIAN LAW RETRIEVED FROM DATABASE:\n"
+                    for match in legal_matches.data:
+                        legal_context += f"- Source: {match['document_title']}\n  Exact Clause: {match['content']}\n"
+            except Exception as db_err:
+                logger.error(f"Supabase Search Error: {str(db_err)}")
+
+        # --- 4. THE INVINCIBLE PROMPT ---
+        system_prompt = f"""
+        You are Karma AI, a ruthless Legal Strategist for Indian Consumers.
+        
+        {legal_context}
+
+        INSTRUCTIONS:
+        1. Read the user's corporate rejection excuse.
+        2. Use the "RELEVANT INDIAN LAW" provided above to destroy their excuse.
+        3. ALWAYS explicitly name the Act/Rule/Guidelines provided in the context.
+        4. Keep your response to 3 aggressive, highly professional sentences that the user can copy-paste.
+        5. NEVER invent laws or cite foreign laws.
         """
+        
         messages = [{"role": "system", "content": system_prompt}]
 
-        # --- NEW: VISION AI ROUTING ---
+        # --- 5. VISION AI ROUTING ---
         if payload.image_base64:
             messages.append({
                 "role": "user",
@@ -535,11 +573,13 @@ async def karma_chat(request: Request, payload: ChatRequest):
         response = await client.chat.completions.create(
             model=active_model,
             messages=messages,
-            temperature=0.4, max_tokens=300
+            temperature=0.2, max_tokens=300
         )
         return {"reply": response.choices[0].message.content.strip()}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Karma AI is busy.")
+        
+    except Exception as e:
+        logger.error(f"Chat Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"API Error: {str(e)}")
 
 @app.post("/api/detect-bs")
 @limiter.limit("5/minute")
