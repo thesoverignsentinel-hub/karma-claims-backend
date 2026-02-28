@@ -509,77 +509,90 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 @limiter.limit("10/minute")
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
-        # --- 1. THE FREE RAG SEARCH (Math Brain) ---
+        # --- STEP 1: THE TRIAGE JUDGE (Query Expansion) ---
+        # We ask Groq to translate the user's emotion into a pure legal search term.
+        triage_prompt = f"""
+        Analyze this user complaint: "{payload.user_message}"
+        What Indian legal concepts apply here? 
+        Reply ONLY with a string of legal keywords, act names, and regulatory bodies (e.g., "RBI TAT framework UPI refund DGCA cancellation CCPA dark patterns"). 
+        Do not write sentences. Just keywords.
+        """
+        
+        triage_response = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": triage_prompt}],
+            temperature=0.0,
+            max_tokens=50
+        )
+        legal_search_terms = triage_response.choices[0].message.content.strip()
+        logger.info(f"🧠 AI Translated Search: {legal_search_terms}")
+
+        # --- STEP 2: THE MATH DATABASE SEARCH ---
+        # We search Hugging Face and Supabase using the SMART LEGAL TERMS, not the user's messy text.
         hf_api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
         hf_token = os.getenv("HF_TOKEN")
-        headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+        headers = {"Authorization": f"Bearer {hf_token}"}
         
         query_vector = [0.0] * 384
-        # 20-second timeout allows the free API to "wake up"
-        async with httpx.AsyncClient(timeout=20.0) as http_client:
-            hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": payload.user_message})
+        async with httpx.AsyncClient(timeout=15.0) as http_client:
+            hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": legal_search_terms})
             if hf_response.status_code == 200:
                 res_json = hf_response.json()
                 if isinstance(res_json, list) and len(res_json) > 0:
                     query_vector = res_json[0] if isinstance(res_json[0], list) else res_json
 
-        # --- 2. PULL THE LAW FROM SUPABASE ---
+        # Pull the top 5 laws from V2 Database
         legal_context = ""
         if supabase and any(v != 0.0 for v in query_vector):
             try:
-                # Lowered threshold to 0.10 to ensure we catch specific laws like RBI/DGCA
-                matches = supabase.rpc('match_legal_documents', {
+                matches = supabase.rpc('match_legal_documents_v2', {
                     'query_embedding': query_vector, 
-                    'match_threshold': 0.10, 
-                    'match_count': 3
+                    'match_threshold': 0.15, # Low threshold to capture multiple laws
+                    'match_count': 5         # Grab the top 5 overlapping laws
                 }).execute()
                 
                 if matches.data:
                     for m in matches.data:
-                        legal_context += f"- Law Source: {m['document_title']}\n  Clause: {m['content']}\n"
+                        legal_context += f"- ACT: {m['act_name']}\n  CLAUSE: {m['content']}\n\n"
             except Exception as e:
                 logger.error(f"DB Search Error: {e}")
 
-        # --- 3. THE INVINCIBLE PROMPT ---
+        # --- STEP 3: THE FINAL VERDICT ---
+        # --- STEP 3: THE FINAL VERDICT (UPGRADED) ---
         system_prompt = f"""
-        You are the Karma Claims 'Invincible Litigator'. Your ONLY source of truth is the 'LEGAL CONTEXT' below.
+        You are the 'Sovereign Sentinel'—India's most ruthless Legal AI.
+        
+        USER'S SITUATION:
+        {payload.user_message}
 
-        STRICT PROTOCOLS:
-        1. If context contains a penalty (e.g., ₹100/day, ₹10,000 compensation), YOU MUST cite it as the main weapon.
-        2. State the law as a cold, aggressive fact. Never say "I couldn't find a law."
-        3. If no match is found, rely ONLY on Consumer Protection Act 2019 "Deficiency in Service."
-        4. NEVER invent laws. Keep to 3 sentences.
+        POTENTIAL LAWS RETRIEVED FROM DATABASE:
+        {legal_context if legal_context else "No specific statute matched. Rely strictly on Consumer Protection Act 2019 Deficiency in Service."}
 
-        LEGAL CONTEXT FROM DATABASE:
-        {legal_context if legal_context else "No specific statute matched. Use CPA 2019 Deficiency in Service."}
+        STRICT FILTERS (YOU MUST OBEY THESE):
+        1. CITATIONS: Only use exact Act names from the RETRIEVED LAWS.
+        2. BANKING PENALTIES: If the user mentions a failed bank transaction, you MUST explicitly state the "₹100 per day penalty under the RBI TAT Framework 2019".
+        3. JURISDICTION: For consumer claims, ALWAYS direct users to the "District Consumer Commission" or "e-Daakhil". NEVER suggest the National Commission for everyday disputes.
+        4. 2026 OMBUDSMAN: If it is a banking dispute, explicitly mention that under the "Integrated Ombudsman Scheme 2026," compensation for mental agony is up to ₹3 Lakhs.
+        5. TONE & FORMAT: Be aggressive, factual, and legally devastating. Deliver a sharp 3-step attack plan in 4 sentences maximum.
         """
         
         messages = [{"role": "system", "content": system_prompt}]
-
-        # --- 4. VISION AI ROUTING ---
+        model_to_use = "llama-3.2-11b-vision-preview" if payload.image_base64 else "llama-3.3-70b-versatile"
+        
         if payload.image_base64:
-            messages.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": payload.user_message or "Analyze this legal document."},
-                    {"type": "image_url", "image_url": {"url": payload.image_base64}}
-                ]
-            })
-            model_to_use = "llama-3.2-11b-vision-preview"
+            messages.append({"role": "user", "content": [{"type": "text", "text": "Analyze this evidence."}, {"type": "image_url", "image_url": {"url": payload.image_base64}}]})
         else:
-            messages.append({"role": "user", "content": payload.user_message})
-            model_to_use = "llama-3.3-70b-versatile"
+            messages.append({"role": "user", "content": "Deliver the legal strategy."})
 
-        # TEMPERATURE 0.0 ensures the AI stays factual and doesn't hallucinate
+        # Temperature 0.1 gives it just enough brainpower to synthesize, but keeps it factual.
         response = await client.chat.completions.create(
-            model=model_to_use, messages=messages, temperature=0.0, max_tokens=400
+            model=model_to_use, messages=messages, temperature=0.1, max_tokens=400
         )
         return {"reply": response.choices[0].message.content.strip()}
         
     except Exception as e:
         logger.error(f"Chat Error: {e}")
         return {"reply": "⚠️ The Strategist is recalibrating. Please try again in 10 seconds."}
-
 @app.post("/api/detect-bs")
 @limiter.limit("5/minute")
 async def detect_bullshit(request: Request, payload: BSDetectorRequest):
