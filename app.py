@@ -557,22 +557,31 @@ async def karma_chat(request: Request, payload: ChatRequest):
             except Exception as e:
                 logger.error(f"DB Search Error: {e}")
 
-        # --- STEP 3: THE FINAL VERDICT ---
-        # --- STEP 3: THE FINAL VERDICT (UPGRADED) ---
+        # --- STEP 3: THE FINAL VERDICT (UPGRADED WITH TAG MATRIX) ---
         system_prompt = f"""
         You are the 'Sovereign Sentinel'—India's most ruthless Legal AI.
         
         USER'S SITUATION:
         {payload.user_message}
 
-        POTENTIAL LAWS RETRIEVED FROM DATABASE:
+        POTENTIAL LAWS RETRIEVED:
         {legal_context if legal_context else "No specific statute matched. Rely strictly on Consumer Protection Act 2019 Deficiency in Service."}
 
         STRICT FILTERS (YOU MUST OBEY THESE):
-        1. CITATIONS: You may ONLY cite Act names that are explicitly listed in the RETRIEVED LAWS above. 
-        2. BANKING LOCK: ONLY apply the "₹100/day RBI TAT Framework" and the "Integrated Ombudsman Scheme 2026 (₹3 Lakhs)" if the primary culprit is a BANK or UPI APP (e.g., HDFC, SBI, PhonePe). NEVER apply these to Airlines, Railways, Cabs, or general E-commerce merchants.
-        3. JURISDICTION: For consumer claims, ALWAYS direct users to the "District Consumer Commission" or "e-Daakhil". NEVER suggest the National Commission.
-        4. TONE & FORMAT: Be aggressive, factual, and legally devastating. Deliver a sharp 3-step attack plan in 4 sentences maximum. Do not hallucinate laws outside the retrieved context.
+        1. THE TAGGING MATRIX (CRITICAL): Classify the user's issue using these manual tags. ONLY use laws that match the classified sector:
+           - [Ola, Uber, Cab, Taxi, Rapido] -> TRANSPORT SECTOR. (Use MoRTH / Consumer Act. IGNORE RBI laws).
+           - [Flight, Airline, Indigo, MakeMyTrip] -> AVIATION SECTOR. (Use DGCA. IGNORE RBI laws).
+           - [Train, IRCTC, Railway] -> RAILWAY SECTOR. (Use Railway Rules. IGNORE RBI laws).
+           - [Jio, Airtel, WiFi, SIM, Broadband] -> TELECOM SECTOR. (Use TRAI. IGNORE RBI laws).
+           - [SBI, HDFC, UPI, PhonePe, Bank, Credit Card] -> BANKING SECTOR. (Use RBI TAT & 2026 Ombudsman).
+           
+        2. THE BANKING WEAPONS: ONLY if the sector is BANKING, you MUST explicitly cite the "₹100 per day penalty under the RBI TAT Framework" AND the "Integrated Ombudsman Scheme 2026 (₹3 Lakhs)".
+        
+        3. THE OVERRIDE RULE: If the retrieved laws don't match the sector tags above (e.g., you get an RBI law for an IRCTC issue), DISCARD the retrieved law and simply cite "Deficiency in Service under the Consumer Protection Act 2019".
+        
+        4. JURISDICTION: Always direct users to the "District Consumer Commission" or "e-Daakhil". Never the National Commission.
+        
+        5. TONE: Be ruthless, factual, and deliver a 3-step attack plan in 4 sentences.
         """
         messages = [{"role": "system", "content": system_prompt}]
         model_to_use = "llama-3.2-11b-vision-preview" if payload.image_base64 else "llama-3.3-70b-versatile"
