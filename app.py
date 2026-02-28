@@ -569,13 +569,11 @@ async def karma_chat(request: Request, payload: ChatRequest):
         {legal_context if legal_context else "No specific statute matched. Rely strictly on Consumer Protection Act 2019 Deficiency in Service."}
 
         STRICT FILTERS (YOU MUST OBEY THESE):
-        1. CITATIONS: Only use exact Act names from the RETRIEVED LAWS.
-        2. BANKING PENALTIES: If the user mentions a failed bank transaction, you MUST explicitly state the "₹100 per day penalty under the RBI TAT Framework 2019".
-        3. JURISDICTION: For consumer claims, ALWAYS direct users to the "District Consumer Commission" or "e-Daakhil". NEVER suggest the National Commission for everyday disputes.
-        4. 2026 OMBUDSMAN: If it is a banking dispute, explicitly mention that under the "Integrated Ombudsman Scheme 2026," compensation for mental agony is up to ₹3 Lakhs.
-        5. TONE & FORMAT: Be aggressive, factual, and legally devastating. Deliver a sharp 3-step attack plan in 4 sentences maximum.
+        1. CITATIONS: You may ONLY cite Act names that are explicitly listed in the RETRIEVED LAWS above. 
+        2. BANKING LOCK: ONLY apply the "₹100/day RBI TAT Framework" and the "Integrated Ombudsman Scheme 2026 (₹3 Lakhs)" if the primary culprit is a BANK or UPI APP (e.g., HDFC, SBI, PhonePe). NEVER apply these to Airlines, Railways, Cabs, or general E-commerce merchants.
+        3. JURISDICTION: For consumer claims, ALWAYS direct users to the "District Consumer Commission" or "e-Daakhil". NEVER suggest the National Commission.
+        4. TONE & FORMAT: Be aggressive, factual, and legally devastating. Deliver a sharp 3-step attack plan in 4 sentences maximum. Do not hallucinate laws outside the retrieved context.
         """
-        
         messages = [{"role": "system", "content": system_prompt}]
         model_to_use = "llama-3.2-11b-vision-preview" if payload.image_base64 else "llama-3.3-70b-versatile"
         
