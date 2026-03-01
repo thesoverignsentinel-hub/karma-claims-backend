@@ -13,6 +13,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from supabase import create_client, Client
+from war_room import run_legal_war_room
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ⚡ KARMA CLAIMS — ENGINE v5.2 (VISION & LEAD EDITION)
@@ -557,47 +558,37 @@ async def karma_chat(request: Request, payload: ChatRequest):
             except Exception as e:
                 logger.error(f"DB Search Error: {e}")
 
-        # --- STEP 3: THE FINAL VERDICT (SKELETON MATRIX ENGINE) ---
-        system_prompt = f"""
-        You are the 'Sovereign Sentinel'—India's most ruthless Legal AI.
-        
-        USER'S SITUATION: {payload.user_message}
-        RETRIEVED SECTOR LAWS: {legal_context if legal_context else "Consumer Protection Act 2019"}
-
-        YOUR GOAL: You MUST output a single paragraph consisting of EXACTLY 3 or 4 sentences following this strict skeletal structure. DO NOT use bullet points or headings.
-
-        [SENTENCE 1: THE SECTOR ATTACK] 
-        - Look at the RETRIEVED SECTOR LAWS. You MUST explicitly name the specific industry law provided (e.g., DGCA for flights, MoRTH for cabs, Railway Rules for IRCTC, RBI for banks). If none apply to the industry, cite "Deficiency in Service under the Consumer Protection Act 2019".
-        
-        [SENTENCE 2: THE CORPORATE TAKEDOWN]
-        - Destroy the company's excuse using ONE of these hardcoded rules:
-          * If they claim wrong city -> "Under Sec 34(2)(d) of the CPA 2019, you can file where you reside."
-          * If they claim time limit -> "Under Sec 69 of the CPA 2019, you have a 2-year statutory limitation period."
-          * If they claim middleman/gateway -> "The E-Commerce Rules 2020 enforce 'Fallback Liability' on the platform."
-          * If they claim arbitration -> "Supreme Court rulings dictate arbitration does not bar Consumer Commission complaints."
-          * If they claim glitch -> "The IT Act 2000 mandates robust infrastructure; glitches are a deficiency in service."
-
-        [SENTENCE 3: THE BANKING KILL-SHOT (CONDITIONAL)]
-        - IF AND ONLY IF the target is a Bank or UPI app, you MUST write this exact sentence: "Demand the ₹100 per day penalty under the RBI TAT Framework 2019, and escalate to the Integrated Ombudsman Scheme 2026 for up to ₹3 Lakhs in mental agony compensation." (Do not write this for airlines, cabs, e-commerce, or railways).
-
-        [SENTENCE 4: THE ACTION]
-        - Order the user to file immediately at the "District Consumer Commission" or via "e-Daakhil".
-
-        TONE: Ruthless, factual, authoritative. No introductory filler phrases.
-        """
-        messages = [{"role": "system", "content": system_prompt}]
-        model_to_use = "llama-3.2-11b-vision-preview" if payload.image_base64 else "llama-3.3-70b-versatile"
-        
+        # --- STEP 3: THE HYBRID WAR ROOM ENGINE ---
         if payload.image_base64:
-            messages.append({"role": "user", "content": [{"type": "text", "text": "Analyze this evidence."}, {"type": "image_url", "image_url": {"url": payload.image_base64}}]})
+            # VISION PROTOCOL: If they uploaded an image, use the Vision AI directly
+            system_prompt = f"""
+            You are the 'Sovereign Sentinel'—India's most ruthless Legal AI.
+            USER'S SITUATION: {payload.user_message}
+            RETRIEVED SECTOR LAWS: {legal_context if legal_context else "Consumer Protection Act 2019"}
+            
+            YOUR GOAL: Analyze the uploaded evidence. Output a single paragraph of EXACTLY 3 or 4 sentences.
+            1. Name the specific sector law from the retrieved laws.
+            2. Destroy the company's excuse using the Consumer Protection Act.
+            3. (Only if a Bank/UPI): Demand the ₹100/day RBI penalty and ₹3 Lakhs under the 2026 Ombudsman.
+            4. Order them to file at the District Consumer Commission or e-Daakhil.
+            """
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": [
+                    {"type": "text", "text": "Analyze this evidence."}, 
+                    {"type": "image_url", "image_url": {"url": payload.image_base64}}
+                ]}
+            ]
+            response = await client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview", messages=messages, temperature=0.1, max_tokens=400
+            )
+            ai_response = response.choices[0].message.content.strip()
+            
         else:
-            messages.append({"role": "user", "content": "Deliver the legal strategy."})
+            # WAR ROOM PROTOCOL: If it's a pure text dispute, unleash the 3-Agent CrewAI Team!
+            ai_response = run_legal_war_room(payload.user_message, legal_context)
 
-        # Temperature 0.1 gives it just enough brainpower to synthesize, but keeps it factual.
-        response = await client.chat.completions.create(
-            model=model_to_use, messages=messages, temperature=0.1, max_tokens=400
-        )
-        return {"reply": response.choices[0].message.content.strip()}
+        return {"reply": ai_response}
         
     except Exception as e:
         logger.error(f"Chat Error: {e}")
