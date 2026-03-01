@@ -2,6 +2,7 @@ import os
 import logging
 import random
 import httpx
+import traceback
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
@@ -511,7 +512,6 @@ async def triage_copilot(request: Request, payload: TriageRequest):
 async def karma_chat(request: Request, payload: ChatRequest):
     try:
         # --- STEP 1: THE TRIAGE JUDGE (Query Expansion) ---
-        # We ask Groq to translate the user's emotion into a pure legal search term.
         triage_prompt = f"""
         Analyze this user complaint: "{payload.user_message}"
         What Indian legal concepts apply here? 
@@ -529,38 +529,36 @@ async def karma_chat(request: Request, payload: ChatRequest):
         logger.info(f"🧠 AI Translated Search: {legal_search_terms}")
 
         # --- STEP 2: THE MATH DATABASE SEARCH ---
-        # We search Hugging Face and Supabase using the SMART LEGAL TERMS, not the user's messy text.
         hf_api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
         hf_token = os.getenv("HF_TOKEN")
         headers = {"Authorization": f"Bearer {hf_token}"}
         
         query_vector = [0.0] * 384
-        async with httpx.AsyncClient(timeout=15.0) as http_client:
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
             hf_response = await http_client.post(hf_api_url, headers=headers, json={"inputs": legal_search_terms})
             if hf_response.status_code == 200:
                 res_json = hf_response.json()
                 if isinstance(res_json, list) and len(res_json) > 0:
                     query_vector = res_json[0] if isinstance(res_json[0], list) else res_json
 
-        # Pull the top 5 laws from V2 Database
         legal_context = ""
         if supabase and any(v != 0.0 for v in query_vector):
             try:
                 matches = supabase.rpc('match_legal_documents_v2', {
                     'query_embedding': query_vector, 
-                    'match_threshold': 0.15, # Low threshold to capture multiple laws
-                    'match_count': 5         # Grab the top 5 overlapping laws
+                    'match_threshold': 0.15,
+                    'match_count': 5
                 }).execute()
                 
                 if matches.data:
                     for m in matches.data:
                         legal_context += f"- ACT: {m['act_name']}\n  CLAUSE: {m['content']}\n\n"
-            except Exception as e:
-                logger.error(f"DB Search Error: {e}")
+            except Exception as db_e:
+                logger.error(f"Supabase Database Search Error: {db_e}")
 
         # --- STEP 3: THE HYBRID WAR ROOM ENGINE ---
         if payload.image_base64:
-            # VISION PROTOCOL: If they uploaded an image, use the Vision AI directly
+            # VISION PROTOCOL
             system_prompt = f"""
             You are the 'Sovereign Sentinel'—India's most ruthless Legal AI.
             USER'S SITUATION: {payload.user_message}
@@ -585,26 +583,15 @@ async def karma_chat(request: Request, payload: ChatRequest):
             ai_response = response.choices[0].message.content.strip()
             
         else:
-            # WAR ROOM PROTOCOL: If it's a pure text dispute, unleash the 3-Agent CrewAI Team!
+            # WAR ROOM PROTOCOL
             ai_response = run_legal_war_room(payload.user_message, legal_context)
 
         return {"reply": ai_response}
         
     except Exception as e:
-        logger.error(f"Chat Error: {e}")
+        error_details = traceback.format_exc()
+        logger.error(f"Chat Error Full Trace:\n{error_details}")
         return {"reply": "⚠️ The Strategist is recalibrating. Please try again in 10 seconds."}
-@app.post("/api/detect-bs")
-@limiter.limit("5/minute")
-async def detect_bullshit(request: Request, payload: BSDetectorRequest):
-    try:
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": "Analyze the corporate email. State if they are using a 'Stalling Tactic', 'Illegal Demand', or 'Valid Request'. Explain why in 1 sentence. Then give the user 1 sentence to reply with."}, {"role": "user", "content": f"Corporate Email: {payload.corporate_reply}"}],
-            temperature=0.1, max_tokens=200
-        )
-        return {"analysis": response.choices[0].message.content.strip()}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Detector offline.")
 
 @app.post("/api/edakhil-package")
 @limiter.limit("5/minute") 
