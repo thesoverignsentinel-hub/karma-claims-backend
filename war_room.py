@@ -1,28 +1,22 @@
 import os
 from crewai import Agent, Task, Crew, Process, LLM
-from langchain_community.tools import DuckDuckGoSearchRun
 
 def run_legal_war_room(user_message, retrieved_laws):
     # --- 1. INITIALIZE THE BRAIN (NATIVE CREWAI) ---
-    # Using the 'groq/' prefix bypasses Langchain and uses CrewAI's native Groq support
     llm = LLM(
         model="groq/llama-3.3-70b-versatile",
         api_key=os.environ.get("GROQ_API_KEY"),
         temperature=0.0
     )
 
-    # --- 2. INITIALIZE THE LIVE RECON WEAPON ---
-    web_search = DuckDuckGoSearchRun()
-
-    # --- 3. HIRE THE VIRTUAL EMPLOYEES (AGENTS) ---
+    # --- 2. HIRE THE VIRTUAL EMPLOYEES (AGENTS) ---
     
     researcher = Agent(
-        role='Senior Legal Researcher & Recon Specialist',
-        goal='Analyze the user complaint, extract laws from the database, and search the live web for the absolute latest government circulars regarding this company.',
-        backstory='You are a meticulous paralegal with live internet access. If the provided database is missing the exact penalty amount (like RBI TAT or DGCA rules), you instantly search the web to find the current Indian legal mandate. You never guess.',
+        role='Senior Legal Researcher',
+        goal='Analyze the user complaint and extract ONLY the applicable laws from the provided database.',
+        backstory='You are a meticulous paralegal. You never make up laws. You strictly rely on the provided database.',
         verbose=True,
         allow_delegation=False,
-        tools=[web_search],
         llm=llm
     )
 
@@ -44,13 +38,11 @@ def run_legal_war_room(user_message, retrieved_laws):
         llm=llm
     )
 
-    # --- 4. ASSIGN THEIR MISSIONS (TASKS) ---
+    # --- 3. ASSIGN THEIR MISSIONS (TASKS) ---
     
     task1 = Task(
-        description=f'''Analyze this user complaint: "{user_message}". 
-        First, check these retrieved laws: {retrieved_laws}. 
-        If the retrieved laws do not contain specific, actionable penalties (e.g., exact ₹ amounts or exact refund timelines), YOU MUST use your web search tool to find the latest Indian government rules for this specific industry (RBI, DGCA, MoRTH, CCPA).''',
-        expected_output='A detailed report containing the user issue, the database laws, and any new real-time laws found via web search.',
+        description=f'Analyze this user complaint: "{user_message}". Then, identify which of these retrieved laws strictly apply to their specific industry: {retrieved_laws}',
+        expected_output='A summary of the user issue and the exact matching laws from the database.',
         agent=researcher
     )
 
@@ -81,7 +73,7 @@ def run_legal_war_room(user_message, retrieved_laws):
         agent=sentinel
     )
 
-    # --- 5. ASSEMBLE THE CREW AND ATTACK ---
+    # --- 4. ASSEMBLE THE CREW AND ATTACK ---
     legal_crew = Crew(
         agents=[researcher, defender, sentinel],
         tasks=[task1, task2, task3],
