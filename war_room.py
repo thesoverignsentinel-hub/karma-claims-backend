@@ -1,4 +1,9 @@
 import os
+
+# --- DISABLE CREWAI INTERACTIVE TERMINAL PROMPTS ---
+os.environ["CREWAI_TRACING_ENABLED"] = "false"
+os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
+
 from crewai import Agent, Task, Crew, Process, LLM
 
 def run_legal_war_room(user_message, retrieved_laws):
