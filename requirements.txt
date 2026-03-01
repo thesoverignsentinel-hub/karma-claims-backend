@@ -10,3 +10,4 @@ crewai
 langchain
 langchain-groq
 email-validator
+duckduckgo-search
