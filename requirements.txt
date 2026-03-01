@@ -11,3 +11,4 @@ langchain
 langchain-groq
 email-validator
 duckduckgo-search
+langchain-community
