@@ -6,4 +6,6 @@ groq
 slowapi
 supabase
 httpx
-email-validator
+crewai
+langchain
+langchain-groq
