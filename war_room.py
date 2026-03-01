@@ -1,14 +1,13 @@
 import os
-from crewai import Agent, Task, Crew, Process
-from langchain_groq import ChatGroq
+from crewai import Agent, Task, Crew, Process, LLM
 
 def run_legal_war_room(user_message, retrieved_laws):
-    # --- 1. INITIALIZE THE BRAIN ---
-    # We set temperature=0 so the AI is purely factual and does not hallucinate.
-    llm = ChatGroq(
-        temperature=0, 
+    # --- 1. INITIALIZE THE BRAIN (NATIVE CREWAI) ---
+    # We use the 'groq/' prefix to tell CrewAI exactly which server to hit
+    llm = LLM(
+        model="groq/llama-3.3-70b-versatile",
         api_key=os.environ.get("GROQ_API_KEY"),
-        model_name="llama-3.3-70b-versatile" 
+        temperature=0.0
     )
 
     # --- 2. HIRE THE VIRTUAL EMPLOYEES (AGENTS) ---
@@ -74,7 +73,7 @@ def run_legal_war_room(user_message, retrieved_laws):
         expected_output='A highly structured, factual 4-sentence aggressive legal strategy.',
         agent=sentinel
     )
-    
+
     # --- 4. ASSEMBLE THE CREW AND ATTACK ---
     legal_crew = Crew(
         agents=[researcher, defender, sentinel],
