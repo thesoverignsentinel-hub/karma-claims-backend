@@ -1,0 +1,22 @@
+# Security (NEVER UPLOAD THESE)
+.env
+.env.*
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# Logs and Databases
+*.log
+*.sqlite3
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+legal_pdfs/
+requirements-build.txt

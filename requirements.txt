@@ -1,15 +1,19 @@
-fastapi
-uvicorn
-pydantic
-python-dotenv
-groq
-slowapi
-supabase
-httpx
-crewai
-langchain
-langchain-groq
-email-validator
-duckduckgo-search
-langchain-community
-litellm
+# Web Framework & API
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic[email]==2.7.4
+slowapi==0.1.9
+httpx==0.27.0
+
+# AI & Agents
+groq==0.9.0
+crewai==0.86.0
+langchain-groq==0.1.5
+langchain-core==0.2.0
+
+# Web Search (War Room)
+duckduckgo-search==6.2.13
+
+# Database & Environment
+supabase==2.6.0
+python-dotenv==1.0.1
