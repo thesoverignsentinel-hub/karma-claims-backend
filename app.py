@@ -770,6 +770,14 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
             - COMMON CORPORATE BS: "We only report what lenders give us. Contact your bank to correct the error."
             - YOUR LEGAL COUNTER: Under RBI's Credit Information Companies (Regulation) Act 2005, the bureau has a legal obligation to investigate and correct disputes within 30 days. Shifting responsibility to lenders is illegal stonewalling.
             """,
+            "Loan Apps & CIBIL": """
+            - SPECIFIC FACTS NEEDED: App name (KreditBee/CASHe/KreditBee/MoneyView/Dhani), Loan amount, Amount already repaid, Amount they are now claiming, Whether Key Fact Statement was shown before disbursement.
+            - SCENARIO A — PREDATORY INTEREST / HIDDEN CHARGES: RBI Digital Lending Guidelines 2022 mandate lenders display the full Annual Percentage Rate (APR) and a Key Fact Statement BEFORE disbursement. "Low interest" without APR is a direct violation. Any interest not disclosed upfront is legally unenforceable. Principal repayment = full and final settlement if APR was hidden.
+            - SCENARIO B — RECOVERY AGENT HARASSMENT: RBI Fair Practices Code prohibits contacting family, colleagues, or neighbours. File criminal complaint + RBI Ombudsman simultaneously. Bank is vicariously liable for agent conduct.
+            - SCENARIO C — CIBIL SCORE DAMAGED BY LOAN APP: Both lender AND bureau are jointly liable under CICRA 2005 Section 22. File against both at cms.rbi.org.in. 30-day correction mandatory.
+            - SCENARIO D — LOAN ACTIVATED WITHOUT CONSENT (EDTECH/SHOPPING): CCPA has specific orders against apps activating loans without clear consent. File with CCPA + RBI simultaneously.
+            - CORPORATE BS COUNTER: "You signed the terms" — RBI mandates KEY FACT STATEMENT with APR in plain language BEFORE signing. If this was not provided, the contract terms on interest are void. File at cms.rbi.org.in selecting Digital Lending.
+            """,
             "Logistics & Couriers": """
             - SPECIFIC FACTS NEEDED: Courier Company, AWB/Tracking Number, Package value, Last tracking status, Date.
             - COMMON CORPORATE BS: "The package was marked delivered. We cannot take responsibility after delivery confirmation."
