@@ -391,7 +391,7 @@ async def add_evidence(request: Request, payload: EvidenceLockerRequest, user = 
         raise HTTPException(status_code=500, detail="Database offline.")
     try:
         # Security: verify ownership
-        session_res = supabase.table('chat_sessions').select('user_id, evidence_files').eq('id', payload.session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id, evidence_files').eq('id', payload.session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
@@ -442,12 +442,12 @@ async def add_evidence(request: Request, payload: EvidenceLockerRequest, user = 
         if len(existing_evidence) > 10:
             existing_evidence = existing_evidence[-10:]
 
-        supabase.table('chat_sessions').update(
+        (supabase_admin or supabase).table('chat_sessions').update(
             {"evidence_files": existing_evidence}
         ).eq('id', payload.session_id).execute()
 
         # 🛡️ CHAT SYNC PATCH: Write the upload event into the chat history so it survives page refreshes!
-        supabase.table('messages').insert({
+        (supabase_admin or supabase).table('messages').insert({
             "session_id": payload.session_id, 
             "role": "user", 
             "content": f"📷 [Evidence Uploaded: {payload.file_name}]\nAnalysis: {analysis_text}"
@@ -472,7 +472,7 @@ async def get_evidence(request: Request, session_id: str, user = Depends(get_cur
     if not supabase:
         raise HTTPException(status_code=500, detail="Database offline.")
     try:
-        session_res = supabase.table('chat_sessions').select('user_id, evidence_files').eq('id', session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id, evidence_files').eq('id', session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized.")
         
@@ -492,13 +492,13 @@ async def delete_evidence(request: Request, session_id: str, evidence_id: str, u
     if not supabase:
         raise HTTPException(status_code=500, detail="Database offline.")
     try:
-        session_res = supabase.table('chat_sessions').select('user_id, evidence_files').eq('id', session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id, evidence_files').eq('id', session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized.")
 
         evidence = session_res.data[0].get('evidence_files') or []
         updated = [e for e in evidence if e["id"] != evidence_id]
-        supabase.table('chat_sessions').update({"evidence_files": updated}).eq('id', session_id).execute()
+        (supabase_admin or supabase).table('chat_sessions').update({"evidence_files": updated}).eq('id', session_id).execute()
         return {"status": "success", "evidence_count": len(updated)}
     except HTTPException: raise
     except Exception as e:
@@ -515,7 +515,7 @@ async def update_case_status(request: Request, payload: StatusUpdateRequest, use
         raise HTTPException(status_code=500, detail="Database offline.")
     try:
         # Security: verify ownership before updating
-        session_res = supabase.table('chat_sessions').select('user_id').eq('id', payload.session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id').eq('id', payload.session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized.")
         
@@ -523,7 +523,7 @@ async def update_case_status(request: Request, payload: StatusUpdateRequest, use
         if payload.status == "won" and payload.amount_recovered > 0:
             update_data["amount_recovered"] = payload.amount_recovered
 
-        supabase.table('chat_sessions').update(update_data).eq('id', payload.session_id).execute()
+        (supabase_admin or supabase).table('chat_sessions').update(update_data).eq('id', payload.session_id).execute()
         return {"status": "success", "message": f"Case status updated to '{payload.status}'."}
     except HTTPException: raise
     except Exception as e:
@@ -668,15 +668,15 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
                     bulk_messages.append({"session_id": session_id, "role": msg.role, "content": msg.content})
                 
                 if bulk_messages:
-                    supabase.table('messages').insert(bulk_messages).execute()
+                    (supabase_admin or supabase).table('messages').insert(bulk_messages).execute()
             else:
                 # 🛡️ SECURITY PATCH: Verify case ownership before loading history into the AI's brain
-                auth_check = supabase.table('chat_sessions').select('user_id').eq('id', session_id).execute()
+                auth_check = (supabase_admin or supabase).table('chat_sessions').select('user_id').eq('id', session_id).execute()
                 if not auth_check.data or auth_check.data[0]['user_id'] != user.id:
                     return {"reply": "🛑 SECURITY ALERT: Unauthorized case access detected. Session terminated."}
 
                 # Existing Case: STRICTLY rely on DB memory to prevent duplication
-                past_messages = supabase.table('messages').select('role, content').eq('session_id', session_id).order('created_at', desc=False).execute()
+                past_messages = (supabase_admin or supabase).table('messages').select('role, content').eq('session_id', session_id).order('created_at', desc=False).execute()
                 if past_messages.data:
                     # 🛡️ TOKEN OPTIMIZATION: Keep only the last 6 interactions to prevent context limits
                     recent_messages = past_messages.data[-6:]
@@ -684,13 +684,13 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
                         chat_history_text += f"{msg['role'].upper()}: {msg['content']}\n"
                 
                 # 🛡️ EVIDENCE LINK PATCH: Feed the locked evidence facts to the AI
-                session_meta = supabase.table('chat_sessions').select('evidence_files').eq('id', session_id).execute()
+                session_meta = (supabase_admin or supabase).table('chat_sessions').select('evidence_files').eq('id', session_id).execute()
                 if session_meta.data and session_meta.data[0].get('evidence_files'):
                     chat_history_text += "\n[SYSTEM NOTE: USER UPLOADED THE FOLLOWING EVIDENCE TO THEIR LOCKER]\n"
                     for ev in session_meta.data[0]['evidence_files']:
                         chat_history_text += f"- Evidence Document '{ev['name']}': {ev['analysis']}\n"
             
-            supabase.table('messages').insert({"session_id": session_id, "role": "user", "content": payload.user_message}).execute()
+            (supabase_admin or supabase).table('messages').insert({"session_id": session_id, "role": "user", "content": payload.user_message}).execute()
         else:
             # --- 0. GUEST MEMORY FALLBACK ---
             for msg in payload.history:
@@ -1080,7 +1080,7 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
                                 user_message=strike_prompt,
                                 retrieved_laws=retrieved_laws
                             ),
-                            timeout=85.0
+                            timeout=95.0
                         )
                 except asyncio.TimeoutError:
                     logger.error(f"War Room hit 85s timeout for {detected_company}.")
@@ -1120,7 +1120,7 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
                 
                 # Save to DB
                 if user and session_id and supabase:
-                    supabase.table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
+                    (supabase_admin or supabase).table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
 
                 return {
                     "reply": ai_response, 
@@ -1139,12 +1139,12 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
             else:
                 ai_response = f"I've identified **{detected_company}** as the target. Can you confirm this is correct? Reply **'yes'** and I'll deploy the full legal strike."
                 if user and session_id and supabase:
-                    supabase.table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
+                    (supabase_admin or supabase).table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
                 return {"reply": ai_response, "session_id": session_id}
 
         # --- 4. LOG NORMAL CHAT RESPONSE ---
         if user and session_id and supabase:
-            supabase.table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
+            (supabase_admin or supabase).table('messages').insert({"session_id": session_id, "role": "ai", "content": ai_response}).execute()
 
         return {"reply": ai_response, "session_id": session_id}
 
@@ -1158,7 +1158,7 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
 @app.get("/api/sessions")
 async def get_chat_sessions(user = Depends(get_current_user)):
     try:
-        res = supabase.table('chat_sessions').select('*').eq('user_id', user.id).order('created_at', desc=True).execute()
+        res = (supabase_admin or supabase).table('chat_sessions').select('*').eq('user_id', user.id).order('created_at', desc=True).execute()
         return {"sessions": res.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to retrieve sessions")
@@ -1166,10 +1166,10 @@ async def get_chat_sessions(user = Depends(get_current_user)):
 @app.get("/api/messages/{session_id}")
 async def get_session_messages(session_id: str, user = Depends(get_current_user)):
     try:
-        session_res = supabase.table('chat_sessions').select('user_id').eq('id', session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id').eq('id', session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized")
-        res = supabase.table('messages').select('*').eq('session_id', session_id).order('created_at', desc=False).execute()
+        res = (supabase_admin or supabase).table('messages').select('*').eq('session_id', session_id).order('created_at', desc=False).execute()
         return {"messages": res.data}
     except HTTPException: raise
     except Exception as e: raise HTTPException(status_code=500, detail="Failed to retrieve messages")
@@ -1179,15 +1179,15 @@ async def delete_chat_session(session_id: str, user = Depends(get_current_user))
     """Deletes a specific case and all its messages (DPDP Act Compliance)."""
     try:
         # 1. Verify ownership (Security Check)
-        session_res = supabase.table('chat_sessions').select('user_id').eq('id', session_id).execute()
+        session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id').eq('id', session_id).execute()
         if not session_res.data or session_res.data[0]['user_id'] != user.id:
             raise HTTPException(status_code=403, detail="Unauthorized to delete this case.")
         
         # 2. Delete all messages tied to this case
-        supabase.table('messages').delete().eq('session_id', session_id).execute()
+        (supabase_admin or supabase).table('messages').delete().eq('session_id', session_id).execute()
         
         # 3. Delete the case session itself
-        supabase.table('chat_sessions').delete().eq('id', session_id).execute()
+        (supabase_admin or supabase).table('chat_sessions').delete().eq('id', session_id).execute()
         
         return {"status": "success", "message": "Case permanently deleted."}
     except HTTPException: 
@@ -1202,7 +1202,7 @@ async def generate_edakhil(request: Request, payload: EdakhilRequest, user = Dep
     if not supabase: raise HTTPException(status_code=500, detail="Database offline")
     
     # 🔒 SECURITY PATCH: Verify case ownership
-    session_res = supabase.table('chat_sessions').select('user_id').eq('id', payload.session_id).execute()
+    session_res = (supabase_admin or supabase).table('chat_sessions').select('user_id').eq('id', payload.session_id).execute()
     if not session_res.data or session_res.data[0]['user_id'] != user.id:
         raise HTTPException(status_code=403, detail="Unauthorized access to case history.")
         
@@ -1210,7 +1210,7 @@ async def generate_edakhil(request: Request, payload: EdakhilRequest, user = Dep
     company_address = VERIFIED_DB.get(payload.company_name, {}).get("address", "[INSERT PHYSICAL REGISTERED OFFICE ADDRESS HERE]")
     
     # 1. Pull the chat history so the AI knows the exact facts of the case
-    past_messages = supabase.table('messages').select('role, content').eq('session_id', payload.session_id).order('created_at', desc=False).execute()
+    past_messages = (supabase_admin or supabase).table('messages').select('role, content').eq('session_id', payload.session_id).order('created_at', desc=False).execute()
     
     # 🛡️ DOSSIER TOKEN PATCH: Keep the AI focused on the last 8 interactions so the output doesn't get cut off
     recent_messages = past_messages.data[-8:] if past_messages.data else []

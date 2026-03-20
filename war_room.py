@@ -40,8 +40,8 @@ web_search_tool = Tool(
 )
 
 def throttle_api(output: TaskOutput):
-    """Pauses 12s between tasks to reset Groq TPM limits."""
-    time.sleep(12)
+    """Pauses 8s between tasks to reset Groq TPM limits."""
+    time.sleep(8)
 
 def run_legal_war_room(user_message: str, retrieved_laws: str) -> str:
     import logging
