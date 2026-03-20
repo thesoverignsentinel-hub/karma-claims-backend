@@ -1044,14 +1044,17 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
         else:
             chat_messages = [{"role": "user", "content": intake_prompt}]
 
-        # 🛡️ MODEL ROTATION: Spread load across models to prevent daily token exhaustion
-        sentinel_models = [
+        # 🛡️ MODEL ROTATION: 5 models × 100k free tokens = 500k free tokens/day
+        import datetime
+        _hour = datetime.datetime.now().hour
+        _rotation = [
             "llama-3.3-70b-versatile",
+            "llama-3.1-70b-versatile",
             "llama3-70b-8192",
-            "mixtral-8x7b-32768",
+            "llama-3.1-8b-instant",
+            "gemma2-9b-it",
         ]
-        import random
-        chosen_model = random.choice(sentinel_models) if active_model == "llama-3.3-70b-versatile" else active_model
+        chosen_model = _rotation[_hour % 5] if active_model == "llama-3.3-70b-versatile" else active_model
 
         response = await client.chat.completions.create(
             model=chosen_model,
