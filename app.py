@@ -108,6 +108,14 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 else:
     logger.warning("Supabase Admin: INACTIVE — RAG vault search will be limited")
 
+# ── FEEDBACK MODEL ──
+class FeedbackRequest(BaseModel):
+    session_id: str | None = None
+    outcome: str  # 'correct' / 'wrong_law' / 'wrong_sector' / 'win'
+    sector: str = "General"
+    user_message: str = ""
+    sentinel_response: str = ""
+
 # ── 1. THE LIVING SCOREBOARD ──
 def get_dynamic_metrics():
     db_recovered = 0.0
@@ -922,10 +930,12 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
 
         CRITICAL RULES:
         - Never start with "I see you are facing" or "I understand your frustration" — start with the legal verdict
-        - Never pick just one scenario when multiple apply — stack them
-        - Never say "this may be a violation" — say "this is illegal under [exact law]"
+        - Never pick just one scenario when multiple apply — stack them all
+        - Never say "this may be a violation" — say "this is illegal under [exact law with section number]"
         - Never cite a general law when a specific circular or regulation exists — specificity is power
-        - The user came here because a corporation cheated them. Your job is to make that corporation afraid in the first sentence.
+        - The RBI Zero Liability Circular DBR.No.Leg.BC.78/09.07.005/2017-18 applies to ALL unauthorized transactions where customer was not negligent — always cite it for banking fraud cases
+        - 3 identical transactions in sequence = structured fraud pattern = bank's fraud detection failed = double liability
+        - The user came here because a corporation cheated them — your job is to make that corporation afraid in the first sentence
 
         2. THE "REVERSE UNO" PROTOCOL (CORPORATE TRAP DEFENSE):
         If the user says the company is stalling, claiming to be an "intermediary," or demanding impossible proof (like "Send a screenshot of the button not working"):
@@ -1395,6 +1405,24 @@ async def generate_edakhil(request: Request, payload: EdakhilRequest, user = Dep
     except Exception as e:
         logger.error(f"Court Generation Failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate court documents.")
+
+@app.post("/api/feedback")
+@limiter.limit("30/minute")
+async def save_feedback(request: Request, payload: FeedbackRequest):
+    """Saves user feedback on Sentinel responses for self-improvement loop."""
+    try:
+        if supabase_admin:
+            supabase_admin.table('model_feedback').insert({
+                "session_id": str(payload.session_id) if payload.session_id else None,
+                "outcome": payload.outcome,
+                "sector": payload.sector,
+                "user_message": payload.user_message[:500],
+                "sentinel_response": payload.sentinel_response[:1000],
+            }).execute()
+        return {"status": "saved", "message": "Feedback recorded. Thank you for making Karma AI smarter."}
+    except Exception as e:
+        logger.error(f"Feedback save failed: {e}")
+        return {"status": "ok"}
 
 @app.get("/api/matrix/{company_name}")
 async def escalation_matrix(company_name: str):
