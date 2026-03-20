@@ -737,6 +737,16 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
             - COMMON CORPORATE BS: "Cancellation was not processed in time. Our policy states no refund after billing cycle starts."
             - YOUR LEGAL COUNTER: Auto-renewal without explicit informed consent violates Rule 5 of the Consumer Protection (E-Commerce) Rules 2020 and RBI's e-Mandate guidelines requiring a pre-debit notification 24 hours before charge.
             """,
+            "Food Delivery": """
+            - SPECIFIC FACTS NEEDED: Platform name (Zomato/Swiggy), Order ID, Restaurant name, Exact issue (wrong item/expired food/food poisoning/missing item), Amount paid, Medical bills if food poisoning.
+            - COMMON CORPORATE BS: "This is a restaurant issue. We are just a delivery platform. Contact the restaurant directly. We can only offer a coupon."
+            - YOUR LEGAL COUNTER: This is illegal deflection. Under the Consumer Protection (E-Commerce) Rules 2020 Rule 6, Zomato/Swiggy have FALLBACK LIABILITY for every order on their platform. If food caused illness, this is ALSO a criminal violation under FSSAI Food Safety and Standards Act 2006 Section 26 — selling adulterated or expired food is punishable with imprisonment up to 6 months. A ₹50 coupon against a medical bill is an aggravated deficiency in service. Demand full medical expenses + compensation for endangerment. If a child was affected, courts award significantly higher punitive damages.
+            """,
+            "Subscriptions & Apps": """
+            - SPECIFIC FACTS NEEDED: App/Platform name (Netflix/Spotify/Amazon Prime), Subscription amount, Date of unauthorized auto-debit, Screenshot of cancellation confirmation if available.
+            - COMMON CORPORATE BS: "Your cancellation was not processed before the billing cycle. No refunds on digital subscriptions per our policy."
+            - YOUR LEGAL COUNTER: Three separate legal violations apply here. First, RBI e-Mandate Circular OC-93 requires a pre-debit notification 24 hours before any recurring charge — if you did not receive this SMS/email, the debit is unauthorized. Second, CCPA Dark Patterns Guidelines 2023 explicitly prohibit 'Trick Questions' and 'Hidden Subscription' patterns — if cancellation was made difficult by design, this is a CCPA violation. Third, internal no-refund policies cannot override the Consumer Protection Act 2019. Demand full refund plus ₹5,000 minimum compensation for harassment.
+            """,
             "Wealth-Tech": """
             - SPECIFIC FACTS NEEDED: Broker/App Name, Client ID, Trade ID, Amount lost, Date of failure.
             - COMMON CORPORATE BS: "Market volatility caused the issue. We are not responsible for losses due to technical delays."
@@ -771,16 +781,6 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
             - SPECIFIC FACTS NEEDED: Electricity Board/DISCOM Name, Consumer Number, Billing period, Excess amount billed, Any meter reading anomalies.
             - COMMON CORPORATE BS: "The meter reading is correct as per our records. You must pay the bill."
             - YOUR LEGAL COUNTER: Under the Electricity Act 2003 and respective State Electricity Regulatory Commission regulations, you have the right to demand a meter accuracy test. If the meter is found faulty, all excess billing must be reversed. File with the Electricity Ombudsman if unresolved.
-            """,
-            "Credit Bureaus": """
-            - SPECIFIC FACTS NEEDED: Bureau name (CIBIL/Experian/Equifax/CRIF High Mark), Loan account number, Lender who reported wrong data, Exact error (wrong status/outstanding amount/active after closure/wrong name).
-            - COMMON CORPORATE BS: "We only report what lenders give us. Contact your bank directly to fix the error."
-            - YOUR LEGAL COUNTER: This is illegal deflection. Under the Credit Information Companies (Regulation) Act 2005 Section 22 and RBI Master Direction on Credit Information (updated 2023), the bureau has a DIRECT 30-day correction obligation — independent of the lender. Both the bureau AND the lender are jointly liable. File against both simultaneously. Escalate to cms.rbi.org.in selecting Credit Information Company.
-            """,
-            "Logistics & Couriers": """
-            - SPECIFIC FACTS NEEDED: Courier company name (Delhivery/BlueDart/DTDC/Ecom Express/India Post), AWB/tracking number, Declared value of package, Last tracking status shown, Date of expected delivery.
-            - COMMON CORPORATE BS: "Our system shows delivered. We cannot accept responsibility after delivery confirmation. Contact the sender."
-            - YOUR LEGAL COUNTER: A GPS ping near your address or a doorstep photo is NOT valid proof of delivery under Indian consumer law. Under CPA 2019 Section 2(11), they must produce a signed Proof of Delivery (POD) with recipient name and signature — or OTP confirmation from your registered mobile number. Demand their POD document within 48 hours. If they cannot produce it, the package is legally undelivered and they bear full liability for the declared value.
             """,
             "General": """
             - SPECIFIC FACTS NEEDED: Company name, Service paid for, Exact amount, Date of failure, What was promised vs what was delivered.
