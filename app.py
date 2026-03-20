@@ -656,7 +656,7 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
         if user and supabase:
             if not session_id:
                 # New Case: Save to DB, but use the frontend's history for context
-                session_res = supabase.table('chat_sessions').insert({
+                session_res = (supabase_admin or supabase).table('chat_sessions').insert({
                     "user_id": user.id, "company_name": db_display_name, "issue_summary": payload.user_message[:50] + "..."
                 }).execute()
                 session_id = session_res.data[0]['id']
