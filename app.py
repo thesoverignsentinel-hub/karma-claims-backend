@@ -166,6 +166,10 @@ app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credenti
 
 client = AsyncGroq(api_key=API_KEY)
 
+# 🛡️ INFRASTRUCTURE PATCH: Prevent Render OOM Crashes by capping concurrent heavy AI tasks
+MAX_CONCURRENT_WAR_ROOMS = 3
+war_room_semaphore = asyncio.Semaphore(MAX_CONCURRENT_WAR_ROOMS)
+
 # --- NEW: SAAS AUTHENTICATION MIDDLEWARE ---
 security_bearer = HTTPBearer(auto_error=False)
 
@@ -1065,12 +1069,25 @@ async def karma_chat(request: Request, payload: ChatRequest, user = Depends(get_
                 logger.info(f"RAW LAWS PULLED FROM SUPABASE FOR {db_sector_tag}: {len(retrieved_laws)} chars loaded.")
 
                 # TRIGGER THE 5-WAY WEB WAR ROOM (Threaded so it doesn't block the server)
-                logger.info(f"War Room activated for {detected_company}. This may take 60-90 seconds.")
-                war_room_draft = await asyncio.to_thread(
-                    run_legal_war_room,
-                    user_message=strike_prompt,
-                    retrieved_laws=retrieved_laws
-                )
+                logger.info(f"War Room requested for {detected_company}. Waiting for available clearance...")
+
+                try:
+                    async with war_room_semaphore:
+                        logger.info(f"War Room clearance granted for {detected_company}. Processing...")
+                        war_room_draft = await asyncio.wait_for(
+                            asyncio.to_thread(
+                                run_legal_war_room,
+                                user_message=strike_prompt,
+                                retrieved_laws=retrieved_laws
+                            ),
+                            timeout=85.0
+                        )
+                except asyncio.TimeoutError:
+                    logger.error(f"War Room hit 85s timeout for {detected_company}.")
+                    return {"reply": "⚠️ The Strategist encountered heavy network traffic and timed out. Please type 'yes' to deploy the strike again.", "session_id": session_id}
+                except Exception as e:
+                    logger.error(f"War Room execution failed: {e}")
+                    war_room_draft = None
                 if not war_room_draft or len(war_room_draft.strip()) < 100:
                     war_room_draft = "⚠️ The War Room encountered an issue generating your full battle package. Please type 'yes' again to retry."
 
